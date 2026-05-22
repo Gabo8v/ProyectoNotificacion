@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.notification import Notification, NotificationChannel, NotificationStatus
 from app.models.template import Template
+from app.models.user import User
 from app.schemas.notification import NotificationCreate
 from app.services.notification_service import NotificationService
 
@@ -157,3 +158,45 @@ def history(
         "page": page,
         "total_pages": total_pages,
     })
+
+
+@router.get("/users")
+def list_users(request: Request, db: Session = Depends(get_db)):
+    users = db.query(User).order_by(User.created_at.desc()).all()
+    return templates.TemplateResponse("users.html", {
+        "request": request,
+        "flash": _get_flash(request),
+        "users": users,
+    })
+
+
+@router.post("/users")
+def create_user(
+    request: Request,
+    name: str = Form(...),
+    email: str = Form(...),
+    phone: str | None = Form(None),
+    db: Session = Depends(get_db),
+):
+    try:
+        user = User(name=name, email=email, phone=phone)
+        db.add(user)
+        db.commit()
+        return _redirect("/dashboard/users", "success", f"Usuario '{name}' creado")
+    except Exception as e:
+        return _redirect("/dashboard/users", "error", f"Error: {e}")
+
+
+@router.post("/users/{user_id}/delete")
+def delete_user(
+    request: Request,
+    user_id: str,
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        name = user.name
+        db.delete(user)
+        db.commit()
+        return _redirect("/dashboard/users", "success", f"Usuario '{name}' eliminado")
+    return _redirect("/dashboard/users", "error", "Usuario no encontrado")
