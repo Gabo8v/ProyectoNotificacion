@@ -18,6 +18,20 @@
         <h3>Fallidas</h3>
         <div class="value" style="color: var(--red);">{{ failed }}</div>
     </div>
+    <div class="card">
+        <h3>Usuarios</h3>
+        <div class="value" style="color: var(--accent);">{{ total_users }}</div>
+    </div>
+    <div class="card">
+        <h3>Templates</h3>
+        <div class="value" style="color: var(--accent);">{{ total_templates }}</div>
+    </div>
+</div>
+
+<div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+    <a href="/dashboard/send" class="btn" style="padding:0.75rem 1.5rem;text-decoration:none;">+ Enviar notificacion</a>
+    <a href="/dashboard/users" class="btn" style="padding:0.75rem 1.5rem;text-decoration:none;background:var(--surface2);">Gestionar usuarios</a>
+    <a href="/dashboard/templates" class="btn" style="padding:0.75rem 1.5rem;text-decoration:none;background:var(--surface2);">Gestionar templates</a>
 </div>
 
 <h2 style="margin-bottom: 1rem;">Ultimas notificaciones</h2>
@@ -27,6 +41,7 @@
         <tr>
             <th>Fecha</th>
             <th>Canal</th>
+            <th>Usuario</th>
             <th>Asunto</th>
             <th>Estado</th>
         </tr>
@@ -36,6 +51,7 @@
         <tr>
             <td>{{ n.created_at.strftime('%d/%m %H:%M') }}</td>
             <td><span class="badge badge-{{ n.channel.value }}">{{ n.channel.value }}</span></td>
+            <td>{{ n.user.name if n.user else '<sin usuario>' }}</td>
             <td>{{ n.subject or '(sin asunto)' }}</td>
             <td><span class="badge badge-{{ n.status.value }}">{{ n.status.value }}</span></td>
         </tr>

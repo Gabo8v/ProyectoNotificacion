@@ -39,6 +39,8 @@ def index(request: Request, db: Session = Depends(get_db)):
     sent = db.query(Notification).filter(Notification.status == NotificationStatus.SENT).count()
     pending = db.query(Notification).filter(Notification.status == NotificationStatus.PENDING).count()
     failed = db.query(Notification).filter(Notification.status == NotificationStatus.FAILED).count()
+    total_users = db.query(User).count()
+    total_templates = db.query(Template).count()
     latest = (
         db.query(Notification)
         .order_by(Notification.created_at.desc())
@@ -52,13 +54,22 @@ def index(request: Request, db: Session = Depends(get_db)):
         "sent": sent,
         "pending": pending,
         "failed": failed,
+        "total_users": total_users,
+        "total_templates": total_templates,
         "latest": latest,
     })
 
 
 @router.get("/send")
-def send_form(request: Request):
-    return templates.TemplateResponse("send.html", {"request": request, "flash": _get_flash(request)})
+def send_form(request: Request, db: Session = Depends(get_db)):
+    users = db.query(User).order_by(User.name).all()
+    tpls = db.query(Template).filter(Template.is_active == True).order_by(Template.name).all()
+    return templates.TemplateResponse("send.html", {
+        "request": request,
+        "flash": _get_flash(request),
+        "users": users,
+        "templates": tpls,
+    })
 
 
 @router.post("/send")
@@ -73,12 +84,16 @@ def send_notification(
     service = NotificationService(db)
     try:
         notification = service.send(NotificationCreate(
-            user_id=user_id,
+            user_id=user_id if user_id else None,
             channel=channel,
             subject=subject,
             body=body,
         ))
-        return _redirect("/dashboard/send", "success", f"Notificacion creada (ID: {notification.id})")
+        user_name = ""
+        if user_id:
+            u = db.query(User).filter(User.id == user_id).first()
+            user_name = f" para {u.name}" if u else ""
+        return _redirect("/dashboard/send", "success", f"Notificacion enviada{user_name} (ID: {notification.id})")
     except Exception as e:
         return _redirect("/dashboard/send", "error", f"Error: {e}")
 

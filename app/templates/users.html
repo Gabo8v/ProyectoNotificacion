@@ -3,22 +3,25 @@
 {% block content %}
 <h2 style="margin-bottom: 1rem;">Usuarios</h2>
 
-<form method="POST" action="/dashboard/users" style="margin-bottom: 2rem;">
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin-bottom:1.5rem;">
     <h3 style="margin-bottom: 0.75rem;">Nuevo usuario</h3>
-    <div class="form-group">
-        <label for="name">Nombre</label>
-        <input type="text" name="name" id="name" placeholder="Nombre y apellido" required>
-    </div>
-    <div class="form-group">
-        <label for="email">Email</label>
-        <input type="email" name="email" id="email" placeholder="correo@ejemplo.com" required>
-    </div>
-    <div class="form-group">
-        <label for="phone">Telefono (WhatsApp)</label>
-        <input type="text" name="phone" id="phone" placeholder="5493875360385">
-    </div>
-    <button type="submit">Crear usuario</button>
-</form>
+    <form method="POST" action="/dashboard/users">
+        <div class="form-group">
+            <label for="name">Nombre completo</label>
+            <input type="text" name="name" id="name" placeholder="Ej: Juan Perez" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Correo electronico</label>
+            <input type="email" name="email" id="email" placeholder="ejemplo@correo.com" required>
+        </div>
+        <div class="form-group">
+            <label for="phone">WhatsApp (codigo pais + numero, sin @c.us)</label>
+            <input type="text" name="phone" id="phone" placeholder="5493875360385">
+            <div style="font-size:0.8rem;color:var(--text2);margin-top:0.25rem;">Ej: 54 (Argentina) + 9 + numero</div>
+        </div>
+        <button type="submit">Crear usuario</button>
+    </form>
+</div>
 
 {% if users %}
 <table>
@@ -26,8 +29,7 @@
         <tr>
             <th>Nombre</th>
             <th>Email</th>
-            <th>Telefono</th>
-            <th>ID (UUID)</th>
+            <th>WhatsApp</th>
             <th>Activo</th>
             <th>Accion</th>
         </tr>
@@ -35,10 +37,9 @@
     <tbody>
         {% for u in users %}
         <tr>
-            <td>{{ u.name }}</td>
+            <td><strong>{{ u.name }}</strong></td>
             <td>{{ u.email }}</td>
-            <td>{{ u.phone or '-' }}</td>
-            <td><code style="font-size:0.75rem;color:var(--text2);">{{ u.id }}</code></td>
+            <td><code style="font-size:0.85rem;">{{ u.phone or '-' }}</code></td>
             <td>{{ 'Si' if u.is_active else 'No' }}</td>
             <td>
                 <form method="POST" action="/dashboard/users/{{ u.id }}/delete" style="display:inline;" onsubmit="return confirm('Eliminar usuario {{ u.name }}?')">

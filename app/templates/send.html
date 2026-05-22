@@ -2,26 +2,56 @@
 {% block title %}Enviar Notificacion{% endblock %}
 {% block content %}
 <h2 style="margin-bottom: 1rem;">Enviar notificacion</h2>
-<form method="POST" action="/dashboard/send">
-    <div class="form-group">
-        <label for="channel">Canal</label>
-        <select name="channel" id="channel">
-            <option value="email">Email</option>
-            <option value="whatsapp">WhatsApp</option>
-        </select>
-    </div>
-    <div class="form-group">
-        <label for="user_id">User ID (opcional)</label>
-        <input type="text" name="user_id" id="user_id" placeholder="UUID del usuario">
-    </div>
-    <div class="form-group">
-        <label for="subject">Asunto</label>
-        <input type="text" name="subject" id="subject" placeholder="Asunto del mensaje">
-    </div>
-    <div class="form-group">
-        <label for="body">Mensaje</label>
-        <textarea name="body" id="body" placeholder="Contenido del mensaje" required></textarea>
-    </div>
-    <button type="submit">Enviar</button>
-</form>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin-bottom:1.5rem;">
+    <form method="POST" action="/dashboard/send">
+        <div class="form-group">
+            <label for="channel">Canal de envio</label>
+            <select name="channel" id="channel">
+                <option value="email">Correo electronico (Email)</option>
+                <option value="whatsapp">WhatsApp</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="user_id">Destinatario</label>
+            <select name="user_id" id="user_id">
+                <option value="">-- Seleccionar usuario --</option>
+                {% for u in users %}
+                <option value="{{ u.id }}">{{ u.name }} &lt;{{ u.email }}&gt;</option>
+                {% endfor %}
+            </select>
+            <div style="font-size:0.8rem;color:var(--text2);margin-top:0.25rem;">
+                Sino, crealo en <a href="/dashboard/users" style="color:var(--accent);">Usuarios</a>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="template_selector">Template (opcional — completa asunto y cuerpo automaticamente)</label>
+            <select name="template_selector" id="template_selector">
+                <option value="">-- Ninguno --</option>
+                {% for t in templates %}
+                <option value="{{ t.id }}" data-subject="{{ t.subject or '' }}" data-body="{{ t.body }}">{{ t.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="subject">Asunto</label>
+            <input type="text" name="subject" id="subject" placeholder="Asunto del mensaje">
+        </div>
+        <div class="form-group">
+            <label for="body">Mensaje</label>
+            <textarea name="body" id="body" placeholder="Contenido del mensaje" required></textarea>
+        </div>
+        <button type="submit">Enviar notificacion</button>
+    </form>
+</div>
+
+<script>
+document.getElementById('template_selector').addEventListener('change', function() {
+    var opt = this.options[this.selectedIndex];
+    if (opt.value) {
+        document.getElementById('subject').value = opt.getAttribute('data-subject');
+        document.getElementById('body').value = opt.getAttribute('data-body');
+    }
+});
+</script>
 {% endblock %}

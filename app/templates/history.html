@@ -22,6 +22,9 @@
         </select>
     </div>
     <button type="submit">Filtrar</button>
+    {% if request.query_params.channel or request.query_params.status %}
+    <a href="/dashboard/history" class="btn" style="background:var(--surface2);">Limpiar filtros</a>
+    {% endif %}
 </form>
 
 {% if notifications %}
@@ -30,9 +33,10 @@
         <tr>
             <th>Fecha</th>
             <th>Canal</th>
+            <th>Usuario</th>
             <th>Asunto</th>
             <th>Estado</th>
-            <th>Error</th>
+            <th>Detalle</th>
         </tr>
     </thead>
     <tbody>
@@ -40,9 +44,18 @@
         <tr>
             <td>{{ n.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
             <td><span class="badge badge-{{ n.channel.value }}">{{ n.channel.value }}</span></td>
+            <td>{{ n.user.name if n.user else '<sin usuario>' }}</td>
             <td>{{ n.subject or '(sin asunto)' }}</td>
             <td><span class="badge badge-{{ n.status.value }}">{{ n.status.value }}</span></td>
-            <td>{{ n.error_message or '-' }}</td>
+            <td style="font-size:0.8rem;color:var(--text2);">
+                {% if n.error_message %}
+                Error: {{ n.error_message[:60] }}
+                {% elif n.external_id %}
+                ID: {{ n.external_id[:20] }}
+                {% else %}
+                -
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>
