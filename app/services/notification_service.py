@@ -13,6 +13,10 @@ class NotificationService:
         self.db = db
 
     def send(self, data: NotificationCreate) -> Notification:
+        from app.models.user import User
+        from app.services.gmail import GmailService
+        from app.services.whatsapp import WhatsAppService
+
         notification = Notification(
             user_id=data.user_id,
             channel=NotificationChannel(data.channel),
@@ -23,6 +27,39 @@ class NotificationService:
         self.db.add(notification)
         self.db.commit()
         self.db.refresh(notification)
+
+        user = None
+        if data.user_id:
+            user = self.db.query(User).filter(User.id == data.user_id).first()
+
+        if data.channel == NotificationChannel.EMAIL.value:
+            to = user.email if user else None
+            if to:
+                gmail = GmailService()
+                result = gmail.send_email(to=to, subject=data.subject or "(sin asunto)", body=data.body)
+                if result:
+                    self.mark_sent(notification.id, external_id=result.get("id"))
+                    self.log("email", "info", f"Email enviado a {to}")
+                else:
+                    self.mark_failed(notification.id, "Error al enviar email")
+                    self.log("email", "error", f"Fallo envio email a {to}")
+            else:
+                self.log("email", "warning", f"Email no enviado: destinatario sin direccion (user_id={data.user_id})")
+
+        elif data.channel == NotificationChannel.WHATSAPP.value:
+            phone = user.phone if user else None
+            if phone:
+                wa = WhatsAppService()
+                result = wa.send_message(to=phone, message=data.body)
+                if result:
+                    self.mark_sent(notification.id)
+                    self.log("whatsapp", "info", f"WhatsApp enviado a {phone}")
+                else:
+                    self.mark_failed(notification.id, "Error al enviar WhatsApp")
+                    self.log("whatsapp", "error", f"Fallo envio WhatsApp a {phone}")
+            else:
+                self.log("whatsapp", "warning", f"WhatsApp no enviado: destinatario sin telefono (user_id={data.user_id})")
+
         return notification
 
     def mark_sent(self, notification_id: uuid.UUID, external_id: str | None = None):
