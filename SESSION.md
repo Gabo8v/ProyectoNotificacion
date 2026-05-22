@@ -95,12 +95,31 @@
 
 ---
 
-## FASE 4 - Core Notificaciones ⏳ (PENDIENTE)
+## FASE 4 - Core Notificaciones ✅ (COMPLETADA)
 
-- Implementar NotificationService.send()
-- Implementar NotificationService.get_history()
-- Conectar routers con servicios reales (DB)
-- Logging de todas las operaciones
+### Estado
+- PostgreSQL corriendo en Docker (puerto 5432)
+- pgAdmin en puerto 5050 (admin@notificaciones.com / admin)
+- Migraciones Alembic ejecutadas (tablas: users, notifications, templates, logs)
+- NotificationService implementado con DB real
+
+### Endpoints funcionales
+| Metodo | Ruta | Proposito |
+|--------|------|-----------|
+| POST | `/notifications/send` | Crear notificacion |
+| GET | `/notifications/history` | Historial con filtros (channel, status, limit, offset) |
+| GET | `/templates/` | Listar plantillas |
+| POST | `/templates/` | Crear plantilla |
+| DELETE | `/templates/{id}` | Eliminar plantilla |
+
+### Progreso real
+- ✅ PostgreSQL + pgAdmin levantados con docker-compose
+- ✅ Alembic autogenerate + upgrade (4 tablas creadas)
+- ✅ POST /notifications/send -> 200 (crea registro en DB)
+- ✅ GET /notifications/history -> 200 (devuelve listado)
+- ✅ POST /templates/ -> 200 (crea plantilla)
+- ✅ GET /templates/ -> 200 (lista plantillas)
+- ✅ NotificationService con send(), mark_sent(), mark_failed(), get_history(), log()
 
 ---
 

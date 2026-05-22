@@ -1,9 +1,66 @@
-"""Core notification logic - implements Fase 4."""
+import uuid
+from datetime import datetime
+
+from sqlalchemy.orm import Session
+
+from app.models.notification import Notification, NotificationChannel, NotificationStatus
+from app.models.log import Log, LogLevel
+from app.schemas.notification import NotificationCreate
 
 
 class NotificationService:
-    def send(self, channel: str, to: str, subject: str | None, body: str):
-        raise NotImplementedError("Implementar en Fase 4")
+    def __init__(self, db: Session):
+        self.db = db
 
-    def get_history(self, filters: dict | None = None):
-        raise NotImplementedError("Implementar en Fase 4")
+    def send(self, data: NotificationCreate) -> Notification:
+        notification = Notification(
+            user_id=data.user_id,
+            channel=NotificationChannel(data.channel),
+            status=NotificationStatus.PENDING,
+            subject=data.subject,
+            body=data.body,
+        )
+        self.db.add(notification)
+        self.db.commit()
+        self.db.refresh(notification)
+        return notification
+
+    def mark_sent(self, notification_id: uuid.UUID, external_id: str | None = None):
+        notif = self.db.query(Notification).filter(Notification.id == notification_id).first()
+        if notif:
+            notif.status = NotificationStatus.SENT
+            notif.sent_at = datetime.utcnow()
+            if external_id:
+                notif.external_id = external_id
+            self.db.commit()
+
+    def mark_failed(self, notification_id: uuid.UUID, error: str):
+        notif = self.db.query(Notification).filter(Notification.id == notification_id).first()
+        if notif:
+            notif.status = NotificationStatus.FAILED
+            notif.error_message = error
+            self.db.commit()
+
+    def get_history(
+        self,
+        channel: str | None = None,
+        status: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Notification]:
+        query = self.db.query(Notification)
+        if channel:
+            query = query.filter(Notification.channel == NotificationChannel(channel))
+        if status:
+            query = query.filter(Notification.status == NotificationStatus(status))
+        return query.order_by(Notification.created_at.desc()).offset(offset).limit(limit).all()
+
+    def log(self, channel: str | None, level: str, message: str, details: str | None = None):
+        log = Log(
+            channel=NotificationChannel(channel) if channel else None,
+            level=LogLevel(level),
+            message=message,
+            details=details,
+        )
+        self.db.add(log)
+        self.db.commit()
