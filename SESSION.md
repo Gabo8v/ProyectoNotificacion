@@ -93,6 +93,7 @@ Start-Process -WindowStyle Hidden -FilePath "node" -ArgumentList "whatsapp-bot/i
 | `tests/test_dashboard.py` | Test dashboard |
 | `thunder-collection_Notificaciones.json` | Collection Thunder Client |
 | `GUIA_DE_USO.md` | Guia paso a paso con ejemplo practico |
+| `app/templates/users.html` | Gestion de usuarios desde dashboard |
 | `docker-compose.yml` | PostgreSQL 15 + pgAdmin |
 | `alembic.ini` | Conexion a DB para migraciones |
 | `alembic/env.py` | Importa Base.metadata para autogenerate |
@@ -328,10 +329,25 @@ WhatsApp (respuesta) -> /whatsapp/webhook -> IntegrationService.whatsapp_to_emai
 - `GUIA_DE_USO.md` - Guia paso a paso con ejemplo practico
 - `SESSION.md` actualizado con todas las fases
 
-### Extras agregados post-cierre
-- **Gestion de usuarios desde dashboard** (`/dashboard/users`) - CRUD completo sin SQL
-- **Seed data**: Admin Desarrollador + Juan Perez precargados en DB
+### Extras agregados post-cierre (22/05)
+- **Envio real de notificaciones** - `POST /notifications/send` ahora envía realmente por Gmail/WhatsApp según el canal y actualiza status a "sent" o "failed"
+- **Gestion de usuarios desde dashboard** (`/dashboard/users`) - CRUD completo sin SQL, con formulario y placeholders claros
+- **Seed data**: Admin Desarrollador + Juan Perez precargados en DB (mas tarde se agregaron Gabo, Vale, Mateo con datos reales)
+- **Selector de usuario en formulario de envio** - dropdown con nombre+email en lugar de pegar UUID
+- **Selector de template** - autocompleta asunto y cuerpo al seleccionar un template
+- **Panel de pendientes** en la pagina de enviar (columna derecha) - muestra notificaciones pendientes con un click para responder
+- **Metricas en resumen** - ahora muestra también cantidad de usuarios y templates + botones de acceso rapido
+- **Nombre de usuario en tablas** - Resumen e Historial muestran el nombre en vez del UUID
+- **Limpiar filtros** en Historial
+- **Link a API Docs** en la navegacion
 - Guia de uso practica (`GUIA_DE_USO.md`)
+
+### Mejoras de UX aplicadas
+- Formularios con placeholders mas descriptivos
+- Mensajes flash mas claros (ej: "Notificacion enviada para Admin Desarrollador")
+- Columnas de detalle en historial (ID externo, errores)
+- Navegacion con active states
+- Diseño responsive con grid en pagina de envio
 
 ---
 
