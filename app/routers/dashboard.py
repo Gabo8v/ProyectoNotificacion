@@ -64,11 +64,19 @@ def index(request: Request, db: Session = Depends(get_db)):
 def send_form(request: Request, db: Session = Depends(get_db)):
     users = db.query(User).order_by(User.name).all()
     tpls = db.query(Template).filter(Template.is_active == True).order_by(Template.name).all()
+    pending = (
+        db.query(Notification)
+        .filter(Notification.status == NotificationStatus.PENDING)
+        .order_by(Notification.created_at.desc())
+        .limit(20)
+        .all()
+    )
     return templates.TemplateResponse("send.html", {
         "request": request,
         "flash": _get_flash(request),
         "users": users,
         "templates": tpls,
+        "pending_notifications": pending,
     })
 
 
