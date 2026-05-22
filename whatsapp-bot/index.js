@@ -7,7 +7,11 @@ app.use(express.json());
 
 const client = new Client({
   authStrategy: new LocalAuth(),
-  puppeteer: { headless: true },
+  puppeteer: {
+    headless: true,
+    executablePath: "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+    args: ["--no-sandbox", "--disable-gpu"],
+  },
 });
 
 client.on("qr", (qr) => {

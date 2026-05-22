@@ -65,24 +65,33 @@
 
 ---
 
-## FASE 3 - Bot WhatsApp ⏳ (PENDIENTE)
+## FASE 3 - Bot WhatsApp ✅ (COMPLETADA)
 
-### Lo que hay que hacer
-1. Tener Node.js instalado
-2. `cd whatsapp-bot && npm install`
-3. Verificar que puppeteer/chromium funciona
-4. Escanear QR con el telefono
-5. Probar envio desde FastAPI al bot (HTTP local)
-6. Probar recepcion: WhatsApp -> Node -> FastAPI
+### Estado
+- Node.js 24.16.0 + npm 11.13.0
+- Dependencias instaladas (puppeteer usa Brave existente)
+- QR escaneado y sesion guardada (LocalAuth)
+- Bot autenticado y funcionando
 
-### Estado actual
-- `whatsapp-bot/package.json` creado con dependencias
-- `whatsapp-bot/index.js` creado con:
-  - Cliente whatsapp-web.js
-  - Servidor Express en puerto 3001
-  - Endpoint POST /send-message
-  - Endpoint GET /health
-  - Webhook que reenvia mensajes a FastAPI en /whatsapp/webhook
+### Archivos
+| Archivo | Proposito |
+|---------|-----------|
+| `whatsapp-bot/index.js` | Cliente whatsapp-web.js + Express en puerto 3001 |
+| `whatsapp-bot/package.json` | Dependencias: whatsapp-web.js, qrcode-terminal, express |
+| `app/services/whatsapp.py` | WhatsAppService con send_message() y formato automatico @c.us |
+| `app/routers/whatsapp.py` | POST /whatsapp/webhook para recibir mensajes del bot |
+
+### Configuracion especial
+- Puppeteer usa Brave: `executablePath: "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"`
+- Formato de numero WhatsApp: `5493875360385@c.us` (codigo pais + 9 + numero + @c.us)
+- Sesion guardada en carpeta `.wwebjs_auth/` (no subir a git)
+
+### Progreso real
+- ✅ QR escaneado y sesion conectada
+- ✅ Envio de mensaje a 3875360385: "Hola amigo mio" -> exito
+- ✅ HTTP endpoint /send-message funcional
+- ✅ Webhook /whatsapp/webhook recibe mensajes entrantes
+- ✅ FastAPI corriendo en puerto 8000 con whatsapp router incluido
 
 ---
 

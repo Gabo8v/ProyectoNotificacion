@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routers import health, notifications, templates
+from app.routers import health, notifications, templates, whatsapp
 
 app = FastAPI(
     title="Sistema de Gestion de Notificaciones",
@@ -10,3 +10,4 @@ app = FastAPI(
 app.include_router(health.router)
 app.include_router(notifications.router)
 app.include_router(templates.router)
+app.include_router(whatsapp.router)
