@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %} - Notificaciones</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav>
+        <h1>Notificaciones</h1>
+        <a href="/dashboard/" class="{% if request.url.path == '/dashboard/' %}active{% endif %}">Resumen</a>
+        <a href="/dashboard/send" class="{% if request.url.path == '/dashboard/send' %}active{% endif %}">Enviar</a>
+        <a href="/dashboard/templates" class="{% if request.url.path == '/dashboard/templates' %}active{% endif %}">Templates</a>
+        <a href="/dashboard/history" class="{% if request.url.path == '/dashboard/history' %}active{% endif %}">Historial</a>
+    </nav>
+    <div class="container">
+        {% if flash %}
+        <div class="flash flash-{{ flash.type }}">{{ flash.message }}</div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

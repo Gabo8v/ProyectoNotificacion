@@ -1,0 +1,97 @@
+{
+  "client": "Thunder Client",
+  "collectionName": "Notificaciones API",
+  "created": "2026-05-22",
+  "folders": [
+    {
+      "name": "Health",
+      "requests": [
+        {
+          "name": "Health Check",
+          "method": "GET",
+          "url": "http://localhost:8000/health",
+          "headers": []
+        }
+      ]
+    },
+    {
+      "name": "Notificaciones",
+      "requests": [
+        {
+          "name": "Enviar Email",
+          "method": "POST",
+          "url": "http://localhost:8000/notifications/send",
+          "headers": [{ "name": "Content-Type", "value": "application/json" }],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"channel\": \"email\",\n  \"subject\": \"Asunto de prueba\",\n  \"body\": \"Cuerpo del mensaje\"\n}"
+          }
+        },
+        {
+          "name": "Enviar WhatsApp",
+          "method": "POST",
+          "url": "http://localhost:8000/notifications/send",
+          "headers": [{ "name": "Content-Type", "value": "application/json" }],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"channel\": \"whatsapp\",\n  \"body\": \"Mensaje de WhatsApp\"\n}"
+          }
+        },
+        {
+          "name": "Historial",
+          "method": "GET",
+          "url": "http://localhost:8000/notifications/history?limit=10&offset=0",
+          "headers": []
+        },
+        {
+          "name": "Historial por canal",
+          "method": "GET",
+          "url": "http://localhost:8000/notifications/history?channel=email&status=sent",
+          "headers": []
+        }
+      ]
+    },
+    {
+      "name": "Templates",
+      "requests": [
+        {
+          "name": "Listar templates",
+          "method": "GET",
+          "url": "http://localhost:8000/templates/",
+          "headers": []
+        },
+        {
+          "name": "Crear template",
+          "method": "POST",
+          "url": "http://localhost:8000/templates/",
+          "headers": [{ "name": "Content-Type", "value": "application/json" }],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"name\": \"saludo\",\n  \"keywords\": \"hola,buenas,que tal\",\n  \"subject\": \"Saludo automatico\",\n  \"body\": \"Hola! Gracias por contactarnos.\"\n}"
+          }
+        },
+        {
+          "name": "Eliminar template",
+          "method": "DELETE",
+          "url": "http://localhost:8000/templates/{id}",
+          "headers": []
+        }
+      ]
+    },
+    {
+      "name": "WhatsApp",
+      "requests": [
+        {
+          "name": "Webhook (recibir mensaje)",
+          "method": "POST",
+          "url": "http://localhost:8000/whatsapp/webhook",
+          "headers": [{ "name": "Content-Type", "value": "application/json" }],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"from\": \"5493875360385@c.us\",\n  \"body\": \"hola, necesito informacion\",\n  \"messageId\": \"true_xxx@lid_yyy\",\n  \"timestamp\": 1700000000\n}"
+          }
+        }
+      ]
+    }
+  ]
+}

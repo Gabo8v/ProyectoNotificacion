@@ -64,3 +64,19 @@ class NotificationService:
         )
         self.db.add(log)
         self.db.commit()
+
+    def find_by_conversation_ref(self, ref: str) -> Notification | None:
+        return (
+            self.db.query(Notification)
+            .filter(Notification.conversation_ref == ref)
+            .order_by(Notification.created_at.desc())
+            .first()
+        )
+
+    def get_user_by_email(self, email: str):
+        from app.models.user import User
+        return self.db.query(User).filter(User.email == email).first()
+
+    def get_user_by_phone(self, phone: str):
+        from app.models.user import User
+        return self.db.query(User).filter(User.phone == phone).first()

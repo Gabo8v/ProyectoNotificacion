@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Resumen{% endblock %}
+{% block content %}
+<div class="cards">
+    <div class="card">
+        <h3>Total Notificaciones</h3>
+        <div class="value">{{ total }}</div>
+    </div>
+    <div class="card">
+        <h3>Enviadas</h3>
+        <div class="value" style="color: var(--green);">{{ sent }}</div>
+    </div>
+    <div class="card">
+        <h3>Pendientes</h3>
+        <div class="value" style="color: var(--yellow);">{{ pending }}</div>
+    </div>
+    <div class="card">
+        <h3>Fallidas</h3>
+        <div class="value" style="color: var(--red);">{{ failed }}</div>
+    </div>
+</div>
+
+<h2 style="margin-bottom: 1rem;">Ultimas notificaciones</h2>
+{% if latest %}
+<table>
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Canal</th>
+            <th>Asunto</th>
+            <th>Estado</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for n in latest %}
+        <tr>
+            <td>{{ n.created_at.strftime('%d/%m %H:%M') }}</td>
+            <td><span class="badge badge-{{ n.channel.value }}">{{ n.channel.value }}</span></td>
+            <td>{{ n.subject or '(sin asunto)' }}</td>
+            <td><span class="badge badge-{{ n.status.value }}">{{ n.status.value }}</span></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty">No hay notificaciones todavia.</div>
+{% endif %}
+{% endblock %}

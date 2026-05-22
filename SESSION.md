@@ -74,6 +74,23 @@ cd whatsapp-bot && npm run dev
 | `app/services/notification_service.py` | NotificationService (send, mark_sent, mark_failed, get_history, log) |
 | `whatsapp-bot/index.js` | Servidor Express + whatsapp-web.js client |
 | `whatsapp-bot/package.json` | Dependencias Node.js |
+| `app/services/integration_service.py` | Orquestador bidireccional Gmail <-> WhatsApp |
+| `app/tasks/__init__.py` | Package init |
+| `app/tasks/polling.py` | Background task polling de Gmail |
+| `app/routers/dashboard.py` | Dashboard web con Jinja2 |
+| `app/templates/base.html` | Layout base del dashboard |
+| `app/templates/index.html` | Pagina de resumen |
+| `app/templates/send.html` | Formulario de envio |
+| `app/templates/templates.html` | CRUD de templates |
+| `app/templates/history.html` | Historial con filtros |
+| `app/static/style.css` | Estilos dark mode |
+| `tests/conftest.py` | Fixtures de pytest |
+| `tests/test_health.py` | Test health endpoint |
+| `tests/test_notifications.py` | Test notificaciones |
+| `tests/test_templates.py` | Test templates |
+| `tests/test_whatsapp.py` | Test webhook WhatsApp |
+| `tests/test_dashboard.py` | Test dashboard |
+| `thunder-collection_Notificaciones.json` | Collection Thunder Client |
 | `docker-compose.yml` | PostgreSQL 15 + pgAdmin |
 | `alembic.ini` | Conexion a DB para migraciones |
 | `alembic/env.py` | Importa Base.metadata para autogenerate |
@@ -215,56 +232,94 @@ NotificationService(db)
 
 ---
 
-## FASE 5 - Integracion Bidireccional ⏳ (PENDIENTE - PROXIMA)
+## FASE 5 - Integracion Bidireccional ✅ (COMPLETADA)
 
-### Que hay que implementar
+### Resumen de lo implementado
 
-#### 5a. Gmail -> WhatsApp (polling)
-- Crear un background task/timer en FastAPI que cada N segundos llame a `GmailService.read_inbox()`
-- Por cada correo no leido, crear una Notification y enviarla por WhatsApp via `WhatsAppService.send_message()`
-- Marcar el correo como leido via `GmailService.mark_as_read()`
-- Guardar la relacion entre message_id de Gmail y el numero de WhatsApp en `conversation_ref`
+#### 5a. Gmail -> WhatsApp (polling) ✅
+- Creado `app/tasks/polling.py` con `poll_gmail()` y `run_polling_loop()`
+- Background task via `asyncio` que cada 30s lee inbox de Gmail
+- Por cada correo no leido, crea Notification, envía por WhatsApp, marca como leido
+- Usa `conversation_ref = "gmail:<email>"` para tracking
 
-#### 5b. WhatsApp -> Gmail (respuesta automatica)
-- En el webhook `/whatsapp/webhook`, detectar keywords en el mensaje
-- Buscar en `Template` si alguna keyword coincide
-- Si coincide, obtener el destinatario original y usar `GmailService.send_email()` para responder
-- Guardar la notification en DB
+#### 5b. WhatsApp -> Gmail (respuesta automatica) ✅
+- Webhook `/whatsapp/webhook` modificado para usar `IntegrationService`
+- Detecta keywords en el mensaje contra los Templates activos
+- Si coincide, envía email automaticamente via GmailService
+- Guarda todo en la DB con estado SENT/FAILED
 
-#### 5c. Matching de hilos
-- Cuando llega un correo de X persona, guardar su email como `conversation_ref` en la Notification
-- Cuando responde por WhatsApp, usar ese `conversation_ref` para saber a quien responder por Gmail
-- Formato sugerido: `gmail:<message_id>` o `wa:<phone>@c.us`
+#### 5c. Matching de hilos ✅
+- `conversation_ref` formato: `gmail:<from_email>` para entrantes de Gmail
+- `NotificationService.find_by_conversation_ref()` para buscar hilos
+- `get_user_by_email()` y `get_user_by_phone()` para lookup de usuarios
 
-### Archivos a modificar para Fase 5
-- `app/services/notification_service.py` - Agregar logica de matching
-- `app/routers/whatsapp.py` - Procesar templates y responder
-- **CREAR** `app/services/integration_service.py` - Orquestar el flujo bidireccional
-- **CREAR** `app/tasks/polling.py` - Background task para polling de Gmail
+### Archivos nuevos
+- `app/services/integration_service.py` - Orquesta el flujo bidireccional
+- `app/tasks/__init__.py` - Package init
+- `app/tasks/polling.py` - Background polling loop
 
-### Dependencias nuevas que pueden hacer falta
-- `apscheduler` o `fastapi-utils` para background tasks
-- Ya estaria cubierto con `asyncio` + `BackgroundTasks` de FastAPI
+### Archivos modificados
+- `app/services/notification_service.py` - Metodos de matching
+- `app/routers/whatsapp.py` - Webhook con procesamiento de templates
+- `app/main.py` - Lifespan handler para arrancar polling
 
----
-
-## FASE 6 - Dashboard ⏳ (PENDIENTE)
-
-- Panel web con HTML + CSS + JS o Jinja2
-- Pagina de inicio con resumen (ultimas notificaciones)
-- Formulario para enviar notificaciones manualmente
-- CRUD de templates desde la UI
-- Historial con busqueda por fecha y texto
-- Usar Jinja2 (ya incluido como dependencia de FastAPI) o armar API + frontend separado
+### Flujo completo
+```
+Gmail (correo nuevo) -> poll_gmail() -> IntegrationService.email_to_whatsapp() -> WhatsApp
+WhatsApp (respuesta) -> /whatsapp/webhook -> IntegrationService.whatsapp_to_email() -> Gmail (template match)
+```
 
 ---
 
-## FASE 7 - Documentacion y Tests ⏳ (PENDIENTE)
+## FASE 6 - Dashboard ✅ (COMPLETADA)
 
-- Tests con pytest + httpx (test client de FastAPI)
-- README completo con capturas
-- Guia de instalacion para nuevo desarrollador
-- Postman/Thunder Client collection para los endpoints
+### Resumen de lo implementado
+
+#### Paginas del dashboard
+| Ruta | Descripcion |
+|------|-------------|
+| `GET /dashboard/` | Resumen con tarjetas (total, enviadas, pendientes, fallidas) + ultimas 10 notificaciones |
+| `GET /dashboard/send` | Formulario para enviar notificacion manual |
+| `POST /dashboard/send` | Procesa el envio |
+| `GET /dashboard/templates` | Lista templates + formulario para crear nuevo |
+| `POST /dashboard/templates` | Crea nuevo template |
+| `POST /dashboard/templates/{id}/delete` | Elimina template |
+| `GET /dashboard/history` | Historial con filtros por canal/estado + paginacion |
+
+#### Archivos creados
+- `app/routers/dashboard.py` - Router con Jinja2 templates
+- `app/templates/base.html` - Layout base con navegacion
+- `app/templates/index.html` - Pagina de resumen
+- `app/templates/send.html` - Formulario de envio
+- `app/templates/templates.html` - CRUD de templates
+- `app/templates/history.html` - Historial con filtros y paginacion
+- `app/static/style.css` - Estilos dark mode
+
+#### Archivos modificados
+- `app/main.py` - Monta static files e incluye dashboard router
+
+### Notas
+- Diseño dark mode con paleta slate/blue
+- Los flash messages se pasan por query params en redirects
+- Jinja2 ya venia instalado como dependencia de Starlette/FastAPI
+
+---
+
+## FASE 7 - Documentacion y Tests ✅ (COMPLETADA)
+
+### Tests (pytest + httpx)
+- `tests/conftest.py` - Fixtures con base de datos PostgreSQL dedicada (`notificaciones_test`)
+- `tests/test_health.py` - Health check endpoint
+- `tests/test_notifications.py` - CRUD notificaciones (6 tests)
+- `tests/test_templates.py` - CRUD templates (5 tests)
+- `tests/test_whatsapp.py` - Webhook WhatsApp
+- `tests/test_dashboard.py` - Paginas del dashboard (4 tests)
+- **Total: 17 tests, todos pasando**
+
+### Documentacion
+- `README.md` completo con setup, estructura, endpoints y flujo de integracion
+- `thunder-collection_Notificaciones.json` - Collection para Thunder Client / Postman
+- `SESSION.md` actualizado con todas las fases
 
 ---
 
@@ -324,6 +379,11 @@ python C:\Users\Gabo8\OneDrive\Escritorio\InicioOpenCode\scripts\drive_upload.py
 5. **Puerto 8000 puede estar ocupado** por otro container viejo (`prueba_djangoISDM`) - detenerlo con `docker stop prueba_djangoISDM`.
 6. **El AI puede modificar este archivo** al completar nuevas fases para mantener el estado actualizado.
 7. **Despues de modificar SESSION.md**, siempre hacer commit+push y subir a Drive.
+
+### Flujo de polling
+- Se activa automaticamente al iniciar FastAPI (lifespan handler)
+- Intervalo: 30 segundos
+- Si Gmail no tiene token, logea warning y no falla
 
 ### Decisiones de codigo que debe respetar el AI
 - Usar `Mapped[mapped_column()]` de SQLAlchemy 2.0

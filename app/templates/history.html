@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Historial{% endblock %}
+{% block content %}
+<h2 style="margin-bottom: 1rem;">Historial de notificaciones</h2>
+
+<form method="GET" action="/dashboard/history" class="filters">
+    <div class="form-group">
+        <label for="channel">Canal</label>
+        <select name="channel" id="channel">
+            <option value="">Todos</option>
+            <option value="email" {% if request.query_params.channel == 'email' %}selected{% endif %}>Email</option>
+            <option value="whatsapp" {% if request.query_params.channel == 'whatsapp' %}selected{% endif %}>WhatsApp</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="status">Estado</label>
+        <select name="status" id="status">
+            <option value="">Todos</option>
+            <option value="sent" {% if request.query_params.status == 'sent' %}selected{% endif %}>Enviado</option>
+            <option value="pending" {% if request.query_params.status == 'pending' %}selected{% endif %}>Pendiente</option>
+            <option value="failed" {% if request.query_params.status == 'failed' %}selected{% endif %}>Fallido</option>
+        </select>
+    </div>
+    <button type="submit">Filtrar</button>
+</form>
+
+{% if notifications %}
+<table>
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Canal</th>
+            <th>Asunto</th>
+            <th>Estado</th>
+            <th>Error</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for n in notifications %}
+        <tr>
+            <td>{{ n.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td><span class="badge badge-{{ n.channel.value }}">{{ n.channel.value }}</span></td>
+            <td>{{ n.subject or '(sin asunto)' }}</td>
+            <td><span class="badge badge-{{ n.status.value }}">{{ n.status.value }}</span></td>
+            <td>{{ n.error_message or '-' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+    <a href="?page={{ page - 1 }}&channel={{ request.query_params.channel or '' }}&status={{ request.query_params.status or '' }}" class="btn">Anterior</a>
+    {% endif %}
+    <span style="align-self: center; color: var(--text2);">Pagina {{ page }} de {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="?page={{ page + 1 }}&channel={{ request.query_params.channel or '' }}&status={{ request.query_params.status or '' }}" class="btn">Siguiente</a>
+    {% endif %}
+</div>
+{% endif %}
+{% else %}
+<div class="empty">No hay notificaciones con esos filtros.</div>
+{% endif %}
+{% endblock %}
