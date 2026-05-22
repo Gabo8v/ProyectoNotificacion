@@ -20,25 +20,26 @@
 ### Servicios activos al cerrar:
 | Servicio | Puerto | Estado |
 |----------|--------|--------|
-| FastAPI (uvicorn) | 8000 | ❌ DETENIDO (habia que matarlo) |
+| FastAPI (uvicorn) | 8000 | ✅ CORRIENDO |
 | PostgreSQL (Docker) | 5432 | ✅ CORRIENDO (docker) |
 | pgAdmin (Docker) | 5050 | ✅ CORRIENDO (docker) |
-| WhatsApp Bot (Node.js) | 3001 | ❌ DETENIDO (habia que matarlo) |
+| WhatsApp Bot (Node.js) | 3001 | ✅ CORRIENDO |
 
-### Para reanudar la sesion, ejecutar en orden:
+### Para reanudar la sesion:
 ```powershell
-# 1. Activar entorno
+# Activar entorno
 cd C:\Users\Gabo8\OneDrive\Escritorio\ProyectoNotificacion
 .venv\Scripts\activate
 
-# 2. Verificar PostgreSQL
-docker ps | findstr notificaciones
+# Verificar que todos los servicios esten arriba
+docker ps | findstr notificaciones     # Deben aparecer notificaciones-db y notificaciones-pgadmin
+curl.exe -s http://localhost:3001/health  # WhatsApp bot
+curl.exe -s http://localhost:8000/health  # FastAPI
 
-# 3. Iniciar WhatsApp bot (nueva terminal)
-cd whatsapp-bot && npm run dev
-
-# 4. Iniciar FastAPI
-.venv\Scripts\uvicorn app.main:app --reload --port 8000
+# Si falta alguno, iniciar:
+docker-compose up -d                           # PostgreSQL + pgAdmin
+Start-Process -WindowStyle Hidden -FilePath "node" -ArgumentList "whatsapp-bot/index.js"  # WhatsApp
+.venv\Scripts\uvicorn app.main:app --reload --port 8000  # FastAPI
 ```
 
 ### Archivos sensibles que NO estan en Git (deben copiarse manualmente al clonar):
@@ -91,6 +92,7 @@ cd whatsapp-bot && npm run dev
 | `tests/test_whatsapp.py` | Test webhook WhatsApp |
 | `tests/test_dashboard.py` | Test dashboard |
 | `thunder-collection_Notificaciones.json` | Collection Thunder Client |
+| `GUIA_DE_USO.md` | Guia paso a paso con ejemplo practico |
 | `docker-compose.yml` | PostgreSQL 15 + pgAdmin |
 | `alembic.ini` | Conexion a DB para migraciones |
 | `alembic/env.py` | Importa Base.metadata para autogenerate |
@@ -285,6 +287,9 @@ WhatsApp (respuesta) -> /whatsapp/webhook -> IntegrationService.whatsapp_to_emai
 | `POST /dashboard/templates` | Crea nuevo template |
 | `POST /dashboard/templates/{id}/delete` | Elimina template |
 | `GET /dashboard/history` | Historial con filtros por canal/estado + paginacion |
+| `GET /dashboard/users` | Lista usuarios + formulario para crear nuevo |
+| `POST /dashboard/users` | Crea nuevo usuario |
+| `POST /dashboard/users/{id}/delete` | Elimina usuario |
 
 #### Archivos creados
 - `app/routers/dashboard.py` - Router con Jinja2 templates
@@ -293,6 +298,7 @@ WhatsApp (respuesta) -> /whatsapp/webhook -> IntegrationService.whatsapp_to_emai
 - `app/templates/send.html` - Formulario de envio
 - `app/templates/templates.html` - CRUD de templates
 - `app/templates/history.html` - Historial con filtros y paginacion
+- `app/templates/users.html` - Gestion de usuarios
 - `app/static/style.css` - Estilos dark mode
 
 #### Archivos modificados
@@ -319,7 +325,13 @@ WhatsApp (respuesta) -> /whatsapp/webhook -> IntegrationService.whatsapp_to_emai
 ### Documentacion
 - `README.md` completo con setup, estructura, endpoints y flujo de integracion
 - `thunder-collection_Notificaciones.json` - Collection para Thunder Client / Postman
+- `GUIA_DE_USO.md` - Guia paso a paso con ejemplo practico
 - `SESSION.md` actualizado con todas las fases
+
+### Extras agregados post-cierre
+- **Gestion de usuarios desde dashboard** (`/dashboard/users`) - CRUD completo sin SQL
+- **Seed data**: Admin Desarrollador + Juan Perez precargados en DB
+- Guia de uso practica (`GUIA_DE_USO.md`)
 
 ---
 
