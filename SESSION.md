@@ -27,9 +27,9 @@
 | `app/routers/templates.py` | GET /, POST / (esqueletos) |
 | `app/schemas/notification.py` | Pydantic: NotificationOut, NotificationCreate |
 | `app/schemas/template.py` | Pydantic: TemplateOut, TemplateCreate |
-| `app/services/gmail.py` | **Completado** - GmailService |
-| `app/services/whatsapp.py` | Placeholder |
-| `app/services/notification_service.py` | Placeholder |
+| `app/services/gmail.py` | GmailService completo |
+| `app/services/whatsapp.py` | WhatsAppService con send_message() |
+| `app/services/notification_service.py` | NotificationService con DB |
 | `whatsapp-bot/package.json` | Dependencias Node.js |
 | `whatsapp-bot/index.js` | Bot con Express + whatsapp-web.js |
 | `docker-compose.yml` | PostgreSQL 15 + pgAdmin |
