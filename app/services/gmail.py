@@ -1,19 +1,55 @@
 import os
 import pickle
 import base64
+import logging
 import urllib.parse
 from pathlib import Path
 from email.mime.text import MIMEText
 
 import requests
+from cryptography.fernet import Fernet
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 CREDENTIALS_FILE = Path("credentials.json")
-TOKEN_FILE = Path("gmail_token.pickle")
+TOKEN_FILE = Path(settings.gmail_token_path)
+
+
+def _get_fernet() -> Fernet | None:
+    key = settings.token_encryption_key
+    if not key:
+        logger.warning("TOKEN_ENCRYPTION_KEY no configurada, token sin cifrar")
+        return None
+    try:
+        return Fernet(key.encode() if isinstance(key, str) else key)
+    except Exception as e:
+        logger.warning(f"Error al crear Fernet: {e}")
+        return None
+
+
+def _encrypt(data: bytes) -> bytes:
+    f = _get_fernet()
+    if f:
+        return f.encrypt(data)
+    return data
+
+
+def _decrypt(data: bytes) -> bytes:
+    f = _get_fernet()
+    if f:
+        try:
+            return f.decrypt(data)
+        except Exception as e:
+            logger.error(f"Error al descifrar token: {e}")
+            return data
+    return data
 
 
 def get_client_config():
@@ -64,7 +100,7 @@ def save_token(code):
         scopes=SCOPES,
     )
     with open(TOKEN_FILE, "wb") as f:
-        pickle.dump(creds, f)
+        f.write(_encrypt(pickle.dumps(creds)))
     print("Token de Gmail guardado correctamente.")
 
 
@@ -72,13 +108,13 @@ def get_service():
     creds = None
     if TOKEN_FILE.exists():
         with open(TOKEN_FILE, "rb") as f:
-            creds = pickle.load(f)
+            creds = pickle.loads(_decrypt(f.read()))
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
             with open(TOKEN_FILE, "wb") as f:
-                pickle.dump(creds, f)
+                f.write(_encrypt(pickle.dumps(creds)))
         else:
             print("No hay token valido. Genera uno primero.")
             auth_url()

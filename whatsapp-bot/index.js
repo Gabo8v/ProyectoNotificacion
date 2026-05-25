@@ -28,9 +28,12 @@ client.on("message", async (msg) => {
 
   // Forward incoming message to FastAPI
   try {
+    const headers = { "Content-Type": "application/json" };
+    const apiKey = process.env.WEBHOOK_API_KEY || "";
+    if (apiKey) headers["X-API-Key"] = apiKey;
     await fetch("http://localhost:8000/whatsapp/webhook", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         from: msg.from,
         body: msg.body,
