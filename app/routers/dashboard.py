@@ -1,5 +1,5 @@
+import logging
 import math
-import urllib.parse
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import RedirectResponse
@@ -7,11 +7,14 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.limiter import limiter
 from app.models.notification import Notification, NotificationChannel, NotificationStatus
 from app.models.template import Template
 from app.models.user import User
 from app.schemas.notification import NotificationCreate
 from app.services.notification_service import NotificationService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 templates = Jinja2Templates(directory="app/templates")
@@ -20,14 +23,15 @@ PER_PAGE = 20
 
 
 def _redirect(path: str, type: str, message: str) -> RedirectResponse:
-    params = urllib.parse.urlencode({"flash_type": type, "flash_msg": message})
-    sep = "&" if "?" in path else "?"
-    return RedirectResponse(url=f"{path}{sep}{params}", status_code=303)
+    resp = RedirectResponse(url=path, status_code=303)
+    resp.set_cookie(key="flash_type", value=type, httponly=True, samesite="lax", max_age=10)
+    resp.set_cookie(key="flash_msg", value=message[:500], httponly=True, samesite="lax", max_age=10)
+    return resp
 
 
 def _get_flash(request: Request) -> dict | None:
-    t = request.query_params.get("flash_type")
-    m = request.query_params.get("flash_msg")
+    t = request.cookies.get("flash_type")
+    m = request.cookies.get("flash_msg")
     if t and m:
         return {"type": t, "message": m}
     return None
@@ -81,6 +85,7 @@ def send_form(request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/send")
+@limiter.limit("5/minute")
 def send_notification(
     request: Request,
     channel: str = Form(...),
@@ -101,9 +106,10 @@ def send_notification(
         if user_id:
             u = db.query(User).filter(User.id == user_id).first()
             user_name = f" para {u.name}" if u else ""
-        return _redirect("/dashboard/send", "success", f"Notificacion enviada{user_name} (ID: {notification.id})")
+        return _redirect("/dashboard/send", "success", f"Notificacion enviada{user_name}")
     except Exception as e:
-        return _redirect("/dashboard/send", "error", f"Error: {e}")
+        logger.error(f"Error al enviar notificacion: {e}")
+        return _redirect("/dashboard/send", "error", "Error interno al enviar la notificacion")
 
 
 @router.get("/templates")
@@ -132,7 +138,8 @@ def create_template(
         db.commit()
         return _redirect("/dashboard/templates", "success", f"Template '{name}' creado")
     except Exception as e:
-        return _redirect("/dashboard/templates", "error", f"Error: {e}")
+        logger.error(f"Error al crear template: {e}")
+        return _redirect("/dashboard/templates", "error", "Error interno al crear el template")
 
 
 @router.post("/templates/{template_id}/delete")
@@ -207,7 +214,8 @@ def create_user(
         db.commit()
         return _redirect("/dashboard/users", "success", f"Usuario '{name}' creado")
     except Exception as e:
-        return _redirect("/dashboard/users", "error", f"Error: {e}")
+        logger.error(f"Error al crear usuario: {e}")
+        return _redirect("/dashboard/users", "error", "Error interno al crear el usuario")
 
 
 @router.post("/users/{user_id}/delete")

@@ -1,15 +1,18 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
+from app.auth import require_auth
 from app.database import get_db
+from app.limiter import limiter
 from app.schemas.notification import NotificationCreate, NotificationOut
 from app.services.notification_service import NotificationService
 
-router = APIRouter(prefix="/notifications", tags=["notifications"])
+router = APIRouter(prefix="/notifications", tags=["notifications"], dependencies=[Depends(require_auth)])
 
 
 @router.post("/send", response_model=NotificationOut)
-def send_notification(data: NotificationCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def send_notification(request: Request, data: NotificationCreate, db: Session = Depends(get_db)):
     service = NotificationService(db)
     notification = service.send(data)
     return notification

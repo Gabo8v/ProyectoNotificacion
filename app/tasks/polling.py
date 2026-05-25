@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from app.database import SessionLocal
+from app.routers.polling_control import POLLING_ENABLED
 from app.services.gmail import GmailService
 from app.services.integration_service import IntegrationService
 
@@ -11,6 +12,10 @@ POLL_INTERVAL_SECONDS = 30
 
 
 async def poll_gmail():
+    if not POLLING_ENABLED:
+        await asyncio.sleep(1)
+        return
+
     gmail = GmailService()
     if not gmail.is_ready():
         logger.warning("Polling: Gmail no configurado, skipping")

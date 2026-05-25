@@ -15,7 +15,11 @@
         <a href="/dashboard/history" class="{% if request.url.path == '/dashboard/history' %}active{% endif %}">Historial</a>
         <a href="/dashboard/users" class="{% if request.url.path == '/dashboard/users' %}active{% endif %}">Usuarios</a>
         <span style="flex:1;"></span>
-        <a href="http://localhost:8000/docs" target="_blank" style="font-size:0.8rem;color:var(--text2);">API Docs</a>
+        <button id="btnPolling" onclick="togglePolling()" style="background:none;border:1px solid var(--text2);color:var(--text2);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;">⏸ Detener</button>
+        <a href="http://localhost:8000/docs" target="_blank" style="font-size:0.8rem;color:var(--text2);margin-left:10px;">API Docs</a>
+        <form method="post" action="/logout" style="display:inline;margin-left:10px;">
+            <button type="submit" style="background:none;border:1px solid var(--text2);color:var(--text2);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;">Cerrar sesion</button>
+        </form>
     </nav>
     <div class="container">
         {% if flash %}
@@ -23,5 +27,22 @@
         {% endif %}
         {% block content %}{% endblock %}
     </div>
+    <script>
+    async function togglePolling() {
+        const resp = await fetch('/polling/toggle', { method: 'POST' });
+        const data = await resp.json();
+        const btn = document.getElementById('btnPolling');
+        btn.textContent = data.enabled ? '⏸ Detener' : '▶ Iniciar';
+    }
+    async function updatePollingStatus() {
+        try {
+            const resp = await fetch('/polling/status');
+            const data = await resp.json();
+            const btn = document.getElementById('btnPolling');
+            if (btn) btn.textContent = data.enabled ? '⏸ Detener' : '▶ Iniciar';
+        } catch {}
+    }
+    document.addEventListener('DOMContentLoaded', updatePollingStatus);
+    </script>
 </body>
 </html>

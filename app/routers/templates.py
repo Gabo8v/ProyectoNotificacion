@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.auth import require_auth
 from app.database import get_db
 from app.models.template import Template
 from app.schemas.template import TemplateCreate, TemplateOut
 
-router = APIRouter(prefix="/templates", tags=["templates"])
+router = APIRouter(prefix="/templates", tags=["templates"], dependencies=[Depends(require_auth)])
 
 
 @router.get("/", response_model=list[TemplateOut])
