@@ -1,57 +1,61 @@
 {% extends "base.html" %}
 {% block title %}Templates{% endblock %}
 {% block content %}
-<h2 style="margin-bottom: 1rem;">Templates</h2>
 
-<form method="POST" action="/dashboard/templates" style="margin-bottom: 2rem;">
-    <h3 style="margin-bottom: 0.75rem;">Nuevo template</h3>
+<div class="main-header">
+    <h1 class="main-title">Templates</h1>
+</div>
+
+<div class="main-content">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
+
+<div>
+<h2 style="font-size:1rem;font-weight:500;margin-bottom:0.75rem;">Nuevo template</h2>
+<form method="post" action="/dashboard/templates" class="form-card" style="max-width:100%;">
     <div class="form-group">
         <label for="name">Nombre</label>
-        <input type="text" name="name" id="name" placeholder="ej: saludo" required>
+        <input type="text" id="name" name="name" required placeholder="ej: Bienvenida">
     </div>
     <div class="form-group">
         <label for="keywords">Keywords (separadas por coma)</label>
-        <input type="text" name="keywords" id="keywords" placeholder="hola,buenas,que tal" required>
+        <input type="text" id="keywords" name="keywords" required placeholder="ej: hola,buenos dias,consulta">
     </div>
     <div class="form-group">
         <label for="subject">Asunto (opcional)</label>
-        <input type="text" name="subject" id="subject" placeholder="Asunto del email">
+        <input type="text" id="subject" name="subject" placeholder="Asunto del template">
     </div>
     <div class="form-group">
         <label for="body">Cuerpo</label>
-        <textarea name="body" id="body" placeholder="Contenido del template" required></textarea>
+        <textarea id="body" name="body" required placeholder="Contenido del template..." rows="5"></textarea>
     </div>
     <button type="submit">Crear template</button>
 </form>
+</div>
 
+<div>
+<h2 style="font-size:1rem;font-weight:500;margin-bottom:0.75rem;">Templates existentes</h2>
 {% if templates %}
-<table>
-    <thead>
-        <tr>
-            <th>Nombre</th>
-            <th>Keywords</th>
-            <th>Asunto</th>
-            <th>Activo</th>
-            <th>Accion</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for t in templates %}
-        <tr>
-            <td>{{ t.name }}</td>
-            <td>{{ t.keywords }}</td>
-            <td>{{ t.subject or '-' }}</td>
-            <td>{{ 'Si' if t.is_active else 'No' }}</td>
-            <td>
-                <form method="POST" action="/dashboard/templates/{{ t.id }}/delete" style="display:inline;" onsubmit="return confirm('Eliminar template?')">
-                    <button type="submit" class="btn-danger">Eliminar</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div style="display:flex;flex-direction:column;gap:0.5rem;">
+    {% for t in templates %}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0.75rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+                <strong style="font-size:0.9rem;">{{ t.name }}</strong>
+                <span style="font-size:0.72rem;color:var(--text2);margin-left:0.5rem;">{{ t.keywords }}</span>
+            </div>
+            <form method="post" action="/dashboard/templates/{{ t.id }}/delete" style="margin:0;">
+                <button type="submit" class="btn-danger" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="return confirm('Eliminar template?')">Eliminar</button>
+            </form>
+        </div>
+        {% if t.subject %}<div style="font-size:0.8rem;color:var(--text2);margin-top:0.25rem;">{{ t.subject }}</div>{% endif %}
+    </div>
+    {% endfor %}
+</div>
 {% else %}
-<div class="empty">No hay templates creados.</div>
+<div class="empty-state">No hay templates.</div>
 {% endif %}
+</div>
+
+</div>
+</div>
 {% endblock %}

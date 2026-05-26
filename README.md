@@ -23,17 +23,23 @@ ProyectoNotificacion/
 │   ├── main.py                 # Entry point FastAPI
 │   ├── config.py               # Settings via pydantic-settings
 │   ├── database.py             # SQLAlchemy engine + session
+│   ├── auth.py                 # JWT + bcrypt + role verification
+│   ├── limiter.py              # Rate limiting (slowapi)
 │   ├── models/                 # SQLAlchemy models
-│   │   ├── user.py             # User (id, name, email, phone)
+│   │   ├── user.py             # User (id, name, email, phone, role, password_hash)
 │   │   ├── notification.py     # Notification (channel, status, refs)
 │   │   ├── template.py         # Template (keywords, subject, body)
+│   │   ├── consulta.py         # Consulta (user inquiries, response workflow)
 │   │   └── log.py              # Audit log
-│   ├── routers/                # REST endpoints
+│   ├── routers/                # REST + Web endpoints
+│   │   ├── auth.py             # GET/POST /login, /register, /logout
 │   │   ├── health.py           # GET /health
 │   │   ├── notifications.py    # POST /notifications/send, GET /history
 │   │   ├── templates.py        # CRUD /templates/
 │   │   ├── whatsapp.py         # POST /whatsapp/webhook
-│   │   └── dashboard.py        # Jinja2 dashboard web
+│   │   ├── consulta.py         # GET/POST /dashboard/consulta
+│   │   ├── dashboard.py        # Jinja2 dashboard web
+│   │   └── polling_control.py  # GET/POST /polling/toggle
 │   ├── schemas/                # Pydantic request/response
 │   ├── services/
 │   │   ├── gmail.py            # GmailService (send, read, mark_read)
@@ -42,8 +48,16 @@ ProyectoNotificacion/
 │   │   └── integration_service.py   # Flujo bidireccional
 │   ├── tasks/
 │   │   └── polling.py          # Polling Gmail -> WhatsApp cada 30s
-│   ├── templates/              # Jinja2 HTML templates
-│   └── static/                 # CSS
+│   ├── templates/              # Jinja2 HTML templates (dark theme)
+│   │   ├── base.html           # Sidebar layout izquierda
+│   │   ├── index.html          # Resumen con metricas
+│   │   ├── send.html           # Formulario + consultas pendientes
+│   │   ├── templates.html      # CRUD de templates
+│   │   ├── history.html        # Historial con filtros
+│   │   ├── users.html          # Gestion de usuarios
+│   │   └── consulta.html       # Consultas de usuario
+│   └── static/
+│       └── style.css           # CSS dark mode + sidebar responsive
 ├── whatsapp-bot/               # Bot Node.js (whatsapp-web.js)
 ├── tests/                      # pytest suite
 ├── docker-compose.yml          # PostgreSQL + pgAdmin
@@ -128,10 +142,20 @@ python -c "from app.services.gmail import save_token; save_token('CODIGO')"
 
 `http://localhost:8000/dashboard/`
 
-- Resumen con metricas
-- Envio manual de notificaciones
+- Tema oscuro tipo ChatGPT con sidebar izquierda fija
+- Resumen con metricas separadas por rol (admin ve todas, usuario solo consultas)
+- Envio manual de notificaciones con panel de consultas pendientes clickeables
 - CRUD de templates
+- Gestion de usuarios
 - Historial con filtros y paginacion
+- Modulo de consultas para usuarios no-admin
+
+### Credenciales
+
+| Rol | Usuario | Password |
+|-----|---------|----------|
+| Admin | `admin` | `admin123` |
+| Usuario | `usuario` | `usuario123` |
 
 ## Flujo de integracion
 

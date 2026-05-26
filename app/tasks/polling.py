@@ -16,25 +16,28 @@ async def poll_gmail():
         await asyncio.sleep(1)
         return
 
-    gmail = GmailService()
-    if not gmail.is_ready():
-        logger.warning("Polling: Gmail no configurado, skipping")
-        return
+    def _sync_poll():
+        gmail = GmailService()
+        if not gmail.is_ready():
+            logger.warning("Polling: Gmail no configurado, skipping")
+            return
 
-    db = SessionLocal()
-    try:
-        integration = IntegrationService(db)
-        emails = gmail.read_inbox(max_results=10)
-        for email_data in emails:
-            gmail_id = email_data.get("id")
-            if not gmail_id:
-                continue
-            integration.email_to_whatsapp(email_data)
-            gmail.mark_as_read(gmail_id)
-    except Exception as e:
-        logger.error(f"Polling error: {e}")
-    finally:
-        db.close()
+        db = SessionLocal()
+        try:
+            integration = IntegrationService(db)
+            emails = gmail.read_inbox(max_results=10)
+            for email_data in emails:
+                gmail_id = email_data.get("id")
+                if not gmail_id:
+                    continue
+                integration.email_to_whatsapp(email_data)
+                gmail.mark_as_read(gmail_id)
+        except Exception as e:
+            logger.error(f"Polling error: {e}")
+        finally:
+            db.close()
+
+    await asyncio.to_thread(_sync_poll)
 
 
 async def run_polling_loop():

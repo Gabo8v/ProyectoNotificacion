@@ -6,8 +6,10 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user
 from app.database import get_db
 from app.limiter import limiter
+from app.models.consulta import Consulta
 from app.models.notification import Notification, NotificationChannel, NotificationStatus
 from app.models.template import Template
 from app.models.user import User
@@ -39,21 +41,27 @@ def _get_flash(request: Request) -> dict | None:
 
 @router.get("/")
 def index(request: Request, db: Session = Depends(get_db)):
-    total = db.query(Notification).count()
-    sent = db.query(Notification).filter(Notification.status == NotificationStatus.SENT).count()
-    pending = db.query(Notification).filter(Notification.status == NotificationStatus.PENDING).count()
-    failed = db.query(Notification).filter(Notification.status == NotificationStatus.FAILED).count()
-    total_users = db.query(User).count()
-    total_templates = db.query(Template).count()
-    latest = (
-        db.query(Notification)
-        .order_by(Notification.created_at.desc())
-        .limit(10)
-        .all()
-    )
+    user = get_current_user(request)
+    consultas_total = 0
+    consultas_respondidas = 0
+    total = sent = pending = failed = 0
+    total_users = total_templates = 0
+    latest = []
+    if user and user.role == "admin":
+        total = db.query(Notification).count()
+        sent = db.query(Notification).filter(Notification.status == NotificationStatus.SENT).count()
+        pending = db.query(Notification).filter(Notification.status == NotificationStatus.PENDING).count()
+        failed = db.query(Notification).filter(Notification.status == NotificationStatus.FAILED).count()
+        total_users = db.query(User).count()
+        total_templates = db.query(Template).count()
+        latest = db.query(Notification).order_by(Notification.created_at.desc()).limit(10).all()
+    if user:
+        consultas_total = db.query(Consulta).filter(Consulta.user_id == user.id).count()
+        consultas_respondidas = db.query(Consulta).filter(Consulta.user_id == user.id, Consulta.response.isnot(None)).count()
     return templates.TemplateResponse("index.html", {
         "request": request,
         "flash": _get_flash(request),
+        "user": user,
         "total": total,
         "sent": sent,
         "pending": pending,
@@ -61,26 +69,32 @@ def index(request: Request, db: Session = Depends(get_db)):
         "total_users": total_users,
         "total_templates": total_templates,
         "latest": latest,
+        "consultas_total": consultas_total,
+        "consultas_respondidas": consultas_respondidas,
     })
 
 
 @router.get("/send")
 def send_form(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request)
+    if not user or user.role != "admin":
+        return RedirectResponse(url="/dashboard/")
     users = db.query(User).order_by(User.name).all()
     tpls = db.query(Template).filter(Template.is_active == True).order_by(Template.name).all()
-    pending = (
-        db.query(Notification)
-        .filter(Notification.status == NotificationStatus.PENDING)
-        .order_by(Notification.created_at.desc())
+    pending_consultas = (
+        db.query(Consulta)
+        .filter(Consulta.response.is_(None))
+        .order_by(Consulta.created_at.desc())
         .limit(20)
         .all()
     )
     return templates.TemplateResponse("send.html", {
         "request": request,
         "flash": _get_flash(request),
+        "user": user,
         "users": users,
         "templates": tpls,
-        "pending_notifications": pending,
+        "pending_consultas": pending_consultas,
     })
 
 
@@ -114,8 +128,11 @@ def send_notification(
 
 @router.get("/templates")
 def list_templates(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request)
+    if not user or user.role != "admin":
+        return RedirectResponse(url="/dashboard/")
     tpls = db.query(Template).order_by(Template.created_at.desc()).all()
-    return templates.TemplateResponse("templates.html", {"request": request, "templates": tpls, "flash": _get_flash(request)})
+    return templates.TemplateResponse("templates.html", {"request": request, "user": user, "templates": tpls, "flash": _get_flash(request)})
 
 
 @router.post("/templates")
@@ -165,6 +182,9 @@ def history(
     page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
 ):
+    user = get_current_user(request)
+    if not user or user.role != "admin":
+        return RedirectResponse(url="/dashboard/")
     query = db.query(Notification)
     if channel:
         query = query.filter(Notification.channel == NotificationChannel(channel))
@@ -184,6 +204,7 @@ def history(
     return templates.TemplateResponse("history.html", {
         "request": request,
         "flash": _get_flash(request),
+        "user": user,
         "notifications": notifications,
         "page": page,
         "total_pages": total_pages,
@@ -192,10 +213,14 @@ def history(
 
 @router.get("/users")
 def list_users(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request)
+    if not user or user.role != "admin":
+        return RedirectResponse(url="/dashboard/")
     users = db.query(User).order_by(User.created_at.desc()).all()
     return templates.TemplateResponse("users.html", {
         "request": request,
         "flash": _get_flash(request),
+        "user": user,
         "users": users,
     })
 
@@ -224,8 +249,11 @@ def delete_user(
     user_id: str,
     db: Session = Depends(get_db),
 ):
+    current_user = get_current_user(request)
     user = db.query(User).filter(User.id == user_id).first()
     if user:
+        if current_user and str(current_user.id) == str(user.id):
+            return _redirect("/dashboard/users", "error", "No puedes eliminarte a ti mismo")
         name = user.name
         db.delete(user)
         db.commit()

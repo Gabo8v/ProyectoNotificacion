@@ -33,12 +33,12 @@ cd C:\Users\Gabo8\OneDrive\Escritorio\ProyectoNotificacion
 
 # Verificar que todos los servicios esten arriba
 docker ps | findstr notificaciones     # Deben aparecer notificaciones-db y notificaciones-pgadmin
-curl.exe -s http://localhost:3001/health  # WhatsApp bot
+pm2 status                              # whatsapp-bot debe estar online
 curl.exe -s http://localhost:8000/health  # FastAPI
 
 # Si falta alguno, iniciar:
 docker-compose up -d                           # PostgreSQL + pgAdmin
-Start-Process -WindowStyle Hidden -FilePath "node" -ArgumentList "whatsapp-bot/index.js"  # WhatsApp
+pm2 start whatsapp-bot                         # WhatsApp (desde el proyecto)
 .venv\Scripts\uvicorn app.main:app --reload --port 8000  # FastAPI
 ```
 
@@ -430,3 +430,244 @@ python C:\Users\Gabo8\OneDrive\Escritorio\InicioOpenCode\scripts\drive_upload.py
 - **Repo GitHub:** https://github.com/Gabo8v/ProyectoNotificacion
 - **Plan docx:** https://docs.google.com/document/d/1eW6cN1FZ1_B7Hy2o5GxW77qw3lmdQxIs/edit?usp=drivesdk&ouid=108954821762539778822&rtpof=true&sd=true
 - **SESSION.md en Drive:** https://drive.google.com/file/d/1rcMFyf5msNMqKRMUn8hh8ICbQWWzMG7A/view?usp=drivesdk
+
+---
+
+## SESION 25/05/2026 - PR de MaCasamayor + Fixes de estabilidad
+
+### PR fusionado: `feat: autenticacion JWT + cifrado token Gmail + rate limiting + control de polling + seguridad`
+- **Autor:** MaCasamayor
+- **Branch de revision:** `review/pr-macasamayor` (creada desde `origin/main` post-merge)
+- **Commit:** `c3f4570` (merge `fea0a28`)
+- **Archivos nuevos:**
+  - `app/auth.py` - JWT con python-jose + bcrypt, `require_auth()` middleware helper, `is_authenticated()`
+  - `app/limiter.py` - Rate limiting via slowapi (5/min en envio dashboard)
+  - `app/routers/auth.py` - Pagina de login (`GET /login`, `POST /login`, `POST /logout`)
+  - `app/routers/polling_control.py` - Toggle polling via API (`GET /polling/status`, `POST /polling/toggle`)
+- **Archivos modificados:**
+  - `app/config.py` - Agregados `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `TOKEN_ENCRYPTION_KEY`, `CORS_ORIGINS`, `WEBHOOK_API_KEY`
+  - `app/main.py` - Agregado SessionMiddleware, dashboard_auth_middleware, limiter, polling_control router
+  - `app/services/gmail.py` - Cifrado/descifrado de token via Fernet + `TOKEN_ENCRYPTION_KEY`
+  - `app/tasks/polling.py` - Respeta `POLLING_ENABLED`
+  - `app/routers/dashboard.py` - Rate limiting en POST /dashboard/send
+  - `app/templates/base.html` - Boton de toggle polling + link a API Docs
+  - `requirements.txt` - Nuevas dependencias: passlib, python-jose[cryptography], slowapi, itsdangerous, bcrypt
+- **Credenciales default:** `admin` / `admin123` (desde `app/config.py`)
+
+### Fixes de estabilidad del servidor (aplicados)
+
+| Problema | Causa | Solucion |
+|----------|-------|----------|
+| Servidor no responde HTTP | `print()` en polling bloqueaba event loop async | Reemplazados `print()` con `logger.warning()` / `logger.error()` en `gmail.py` |
+| Servidor se cuelga al iniciar | `creds.refresh(Request())` sin timeout colgaba el startup | Agregado timeout de 10s con `requests_lib.Session` y catch de excepciones |
+| `build("gmail", ...)` bloquea el event loop | Llamada HTTP sincronica dentro de async task | Refactorizado `GmailService` a inicializacion diferida (`_ensure()`) y polling movido a `asyncio.to_thread()` |
+| Token Gmail expirado (`invalid_grant`) | Token revocado por re-autenticacion | Re-autenticacion manual via OAuth (code guardado con `save_token()`) |
+| Spam de `TOKEN_ENCRYPTION_KEY no configurada` | Warning cada 30s en polling | Cambiado a `logger.debug()` |
+
+### Gmail re-autenticado
+- Token renovado via OAuth 2.0 (09:19 PM)
+- `credentials.json` OK (proyecto: mimetic-card-497013-c2)
+- Polling actualmente DESACTIVADO en `main.py` (comentado) para evitar hangs hasta refactorizar a background thread definitivo
+
+### Leccion aprendida / Comportamiento del AI (NO VOLVER A CONGELARSE)
+Cuando el AI ejecute acciones como iniciar un servidor o correr un comando largo debe:
+1. **No hacer que el usuario tenga que estar pendiente** de si el AI sigue o no — si va a hacer algo pesado, avisa antes
+2. **Respuestas cortas y rápidas** — un paso a la vez, sin editar archivos enormes en silencio
+3. **Siempre verificar** inmediatamente con un health check (curl, timeout 5s) despues de iniciar un servicio
+4. **Timeout explicito** en todos los comandos que puedan colgarse (uso de parametro `timeout` en tool calls)
+5. **Auto-diagnostico** si no responde: matar proceso, capturar logs, probar configuracion alternativa
+6. **No esperar** a que el usuario reporte "trabado" - detectarlo automaticamente y corregir en el intento
+7. Si una estrategia falla 2 veces, cambiar de enfoque en lugar de repetir
+
+### Estado actual al cierre
+| Servicio | Puerto | Estado |
+|----------|--------|--------|
+| FastAPI (uvicorn) | 8000 | ✅ CORRIENDO |
+| PostgreSQL (Docker) | 5432 | ✅ CORRIENDO |
+| pgAdmin (Docker) | 5050 | ✅ CORRIENDO |
+| WhatsApp Bot (Node.js) | 3001 | ✅ CORRIENDO (pm2, desde el proyecto `whatsapp-bot/index.js`) |
+
+---
+
+## SESION 26/05/2026 - Reactivacion de envios (Email + WhatsApp)
+
+### Problema al reanudar
+- **Puerto 8000 ocupado** por container `prueba_djangoISDM` -> detenido con `docker stop`
+- **WhatsApp bot caido** -> pm2 apuntaba a `C:\Users\Gabo8\OneDrive\Escritorio\whatsapp-sender\bot.js` (version vieja con endpoint `/send` en vez de `/send-message`)
+- **Numero de Gabo** en DB: `3875606681` sin codigo de pais -> corregido a `5493875606681`
+
+### Soluciones aplicadas
+1. Detenido `prueba_djangoISDM` que ocupaba puerto 8000
+2. Eliminado proceso pm2 viejo y creado nuevo apuntando a `whatsapp-bot/index.js` del proyecto
+3. Corregido telefono de Gabo en DB: `3875606681` -> `5493875606681`
+4. Verificado que pm2 resurrect ejecute el bot correcto (el .bat del escritorio apunta al viejo)
+
+### Estado de envios
+| Canal | Prueba | Resultado |
+|-------|--------|-----------|
+| Email a Gabo | API `/notifications/send` | ✅ sent |
+| Email a Mateo | API `/notifications/send` | ✅ sent |
+| WhatsApp a Gabo | API `/notifications/send` | ✅ sent (tras corregir numero) |
+| WhatsApp a Mateo | API `/notifications/send` | ✅ sent |
+| Bot directo | POST `/send-message` | ✅ success |
+
+### Pendiente
+- El `.bat` del escritorio (`Iniciar Bot WhatsApp.bat`) usa `pm2 resurrect` que restaura el proceso viejo de `whatsapp-sender`. Habria que actualizarlo o ignorarlo y usar `pm2 start` directamente desde el proyecto.
+- Polling Gmail -> WhatsApp sigue desactivado (comentado en `main.py`)
+
+---
+
+## SESION 26/05/2026 (2da parte) - Roles de usuario + Consultas
+
+### Implementacion: Roles (admin/user) + modulo Consultas
+
+#### Cambios en modelos
+- **User**: agregados `role` (admin/user) y `password_hash`
+- **Nuevo modelo `Consulta`**: id, user_id FK, subject, message, created_at
+
+#### Login unificado por roles
+- Misma pagina de login para admin y usuario
+- Login verifica contra DB (password_hash con bcrypt)
+- `GET /register`, `POST /register`: formulario con nombre, email, whatsapp
+- JWT incluye `{"user": ..., "role": ...}`
+
+#### Segregacion por rol en navegacion
+| Pagina | Admin | Usuario |
+|--------|-------|---------|
+| Resumen | ✅ | ✅ (solo sus datos) |
+| Enviar | ✅ | ❌ |
+| Templates | ✅ | ❌ |
+| Historial | ✅ | ❌ |
+| Usuarios | ✅ | ❌ |
+| Consultas | ✅ | ✅ |
+| API Docs | ✅ | ❌ |
+| Toggle Polling | ✅ | ❌ |
+
+#### Archivos nuevos/modificados
+- `app/models/user.py` - +role, +password_hash
+- `app/models/consulta.py` - Nueva tabla
+- `app/models/__init__.py` - +Consulta
+- `app/auth.py` - require_auth() contra DB, +require_admin(), +get_current_user(), is_authenticated() devuelve role
+- `app/routers/auth.py` - Login unificado contra DB, +register GET/POST
+- `app/routers/consulta.py` - CRUD de consultas
+- `app/routers/dashboard.py` - +user a todos los templates
+- `app/templates/base.html` - Nav condicional por role
+- `app/templates/consulta.html` - Nueva pagina
+- `app/main.py` - +consulta router
+- `alembic/versions/f5e556203663_roles_consultas.py` - Migracion
+
+#### Seed data
+- **admin** / admin123 (role=admin)
+- **usuario** / usuario123 (role=user)
+- Admin Desarrollador, Gabo, Mateo tienen password asignado
+
+### Estado al cierre de sesion (26/05/2026)
+| Servicio | Puerto | Estado |
+|----------|--------|--------|
+| FastAPI (uvicorn) | 8000 | ❌ DETENIDO |
+| PostgreSQL (Docker) | 5432 | ✅ CORRIENDO |
+| pgAdmin (Docker) | 5050 | ✅ CORRIENDO |
+| WhatsApp Bot (Node.js) | 3001 | ❌ DETENIDO (pm2 stopped) |
+
+### Para reanudar proxima sesion
+```powershell
+# Activar entorno
+cd C:\Users\Gabo8\OneDrive\Escritorio\ProyectoNotificacion
+.venv\Scripts\activate
+
+# Verificar servicios
+docker ps | findstr notificaciones     # Deben estar notificaciones-db y notificaciones-pgadmin
+pm2 status                              # whatsapp-bot debe estar online
+
+# Si falta PostgreSQL+pgAdmin:
+docker-compose up -d
+
+# Si falta WhatsApp bot:
+pm2 start whatsapp-bot
+
+# Iniciar FastAPI:
+.venv\Scripts\uvicorn app.main:app --reload --port 8000
+
+# Credenciales:
+#   Admin:   admin / admin123
+#   Usuario: usuario / usuario123
+
+# Iniciar FastAPI (si puerto 8000 ocupado, usar 8001):
+.venv\Scripts\uvicorn app.main:app --reload --port 8000
+```
+
+---
+
+## SESION 25/05/2026 - Rediseno dashboard dark mode + Login oscuro + Consultas para usuarios
+
+### Resumen
+Rediseno completo del frontend del dashboard con tema oscuro tipo ChatGPT:
+- Sidebar izquierda fija con navegacion por roles
+- Panel central dinamico
+- Login con mismo tema dark
+- Consultas solo para usuarios no-admin
+
+### Cambios en templates y CSS
+
+#### `app/static/style.css` - Tema oscuro completo
+- Fondo `#0d0d0d`, sidebar `#1a1a1a`, superficies `#222`/`#2a2a2a`
+- Sidebar fija izquierda con logo, boton "Nueva consulta", buscador, navegacion por secciones
+- Stats minimalistas en linea (sin cards con borde)
+- Tablas modernas con header oscuro y hover
+- Badges de estado (sent/pending/failed) con colores
+- Formularios en cards oscuros con bordes sutiles
+- Scrollbar personalizado oscuro
+
+#### `app/templates/base.html` - Nuevo layout
+- Sidebar izquierda con logo + boton nueva consulta + buscador
+- Seccion "Administracion" visible solo para admin (Resumen, Enviar, Templates, Historial, Usuarios)
+- Seccion "Consultas" visible solo para usuarios no-admin
+- Footer de sidebar con avatar, nombre, rol y boton de cerrar sesion
+- Flash messages entre sidebar y contenido
+
+#### `app/templates/index.html` - Resumen segregado
+- Admin: stats de notificaciones (total, enviadas, pendientes, fallidas, usuarios, templates) + tabla ultimas 10
+- User: stats de consultas (total, respondidas) + link a modulo consultas
+
+#### `app/templates/send.html` - Formulario + panel consultas
+- Panel derecho reemplazado: ahora muestra **consultas pendientes** (sin responder) en vez de notificaciones pendientes
+- Consultas clickeables: al hacer clic, cargan asunto, mensaje y usuario en el formulario de envio
+- Selector de canal, usuario, template (eliminado por claridad)
+
+#### `app/templates/consulta.html` - Nueva pagina de consultas
+- Formulario para crear consulta (asunto + mensaje)
+- Historial de consultas del usuario con respuestas
+
+#### `app/templates/history.html`, `users.html` - Actualizados
+- Adaptados al nuevo layout de sidebar + main-header + main-content
+
+#### `app/routers/auth.py` - Login dark
+- CSS inline actualizado al mismo tema oscuro (`#0d0d0d`, `#1a1a1a`, `#2a2a2a`)
+- Cache prevenido con meta tag
+
+#### `app/routers/consulta.py` - Proteccion admin
+- Admin redirigido a `/dashboard/` si intenta acceder a consultas
+
+#### `app/routers/dashboard.py` - Consultas en formulario de envio
+- Ruta `/dashboard/send` ahora pasa `pending_consultas` (consultas sin `response`) en vez de notificaciones pendientes
+
+#### `app/models/consulta.py` - Relacion User
+- Agregada relacion `user: Mapped["User"] = relationship("User", lazy="joined")` para acceso a `c.user.name`
+
+### Problema tecnico: Puerto 8000 zombie
+- Puerta 8000 quedo ocupada por procesos Python zombie (no detectables por `taskkill`)
+- Solucion: usar puerto 8001 como alternativa
+- Causa: multiples instancias de uvicorn con `--reload` dejaban procesos hijos huerfanos en Windows
+
+### Estado al cierre de sesion (25/05/2026)
+| Servicio | Puerto | Estado |
+|----------|--------|--------|
+| FastAPI (uvicorn) | 8001 | ✅ CORRIENDO |
+| PostgreSQL (Docker) | 5432 | ✅ CORRIENDO |
+| pgAdmin (Docker) | 5050 | ✅ CORRIENDO |
+| WhatsApp Bot (Node.js) | 3001 | ✅ CORRIENDO (proceso directo) |
+
+### Pendiente
+- Puerto 8000 sigue ocupado por zombie TCP hasta reinicio de Windows
+- Polling Gmail -> WhatsApp sigue desactivado (comentado en `main.py`)
+```

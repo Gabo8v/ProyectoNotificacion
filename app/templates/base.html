@@ -3,46 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Dashboard{% endblock %} - Notificaciones</title>
+    <title>{% block title %}Dashboard{% endblock %} — Notificaciones</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <nav>
-        <h1>Notificaciones</h1>
-        <a href="/dashboard/" class="{% if request.url.path == '/dashboard/' %}active{% endif %}">Resumen</a>
-        <a href="/dashboard/send" class="{% if request.url.path == '/dashboard/send' %}active{% endif %}">Enviar</a>
-        <a href="/dashboard/templates" class="{% if request.url.path == '/dashboard/templates' %}active{% endif %}">Templates</a>
-        <a href="/dashboard/history" class="{% if request.url.path == '/dashboard/history' %}active{% endif %}">Historial</a>
-        <a href="/dashboard/users" class="{% if request.url.path == '/dashboard/users' %}active{% endif %}">Usuarios</a>
-        <span style="flex:1;"></span>
-        <button id="btnPolling" onclick="togglePolling()" style="background:none;border:1px solid var(--text2);color:var(--text2);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;">⏸ Detener</button>
-        <a href="http://localhost:8000/docs" target="_blank" style="font-size:0.8rem;color:var(--text2);margin-left:10px;">API Docs</a>
-        <form method="post" action="/logout" style="display:inline;margin-left:10px;">
-            <button type="submit" style="background:none;border:1px solid var(--text2);color:var(--text2);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;">Cerrar sesion</button>
-        </form>
-    </nav>
-    <div class="container">
-        {% if flash %}
-        <div class="flash flash-{{ flash.type }}">{{ flash.message }}</div>
-        {% endif %}
-        {% block content %}{% endblock %}
+
+<!-- Sidebar -->
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-logo">◆ <span>Notificaciones</span></div>
+        <a href="/dashboard/consulta" class="btn-new">
+            <span>+</span> <span>Nueva consulta</span>
+        </a>
+        <input class="sidebar-search" type="text" placeholder="Buscar...">
     </div>
-    <script>
-    async function togglePolling() {
-        const resp = await fetch('/polling/toggle', { method: 'POST' });
-        const data = await resp.json();
-        const btn = document.getElementById('btnPolling');
-        btn.textContent = data.enabled ? '⏸ Detener' : '▶ Iniciar';
-    }
-    async function updatePollingStatus() {
-        try {
-            const resp = await fetch('/polling/status');
-            const data = await resp.json();
-            const btn = document.getElementById('btnPolling');
-            if (btn) btn.textContent = data.enabled ? '⏸ Detener' : '▶ Iniciar';
-        } catch {}
-    }
-    document.addEventListener('DOMContentLoaded', updatePollingStatus);
-    </script>
+
+    <nav class="sidebar-nav">
+        {% if user and user.role == 'admin' %}
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Administración</div>
+            <a href="/dashboard/" class="sidebar-item {% if request.url.path == '/dashboard/' %}active{% endif %}">
+                <span class="icon">◇</span> <span>Resumen</span>
+            </a>
+            <a href="/dashboard/send" class="sidebar-item {% if request.url.path == '/dashboard/send' %}active{% endif %}">
+                <span class="icon">▶</span> <span>Enviar</span>
+            </a>
+            <a href="/dashboard/templates" class="sidebar-item {% if request.url.path == '/dashboard/templates' %}active{% endif %}">
+                <span class="icon">☰</span> <span>Templates</span>
+            </a>
+            <a href="/dashboard/history" class="sidebar-item {% if request.url.path == '/dashboard/history' %}active{% endif %}">
+                <span class="icon">◎</span> <span>Historial</span>
+            </a>
+            <a href="/dashboard/users" class="sidebar-item {% if request.url.path == '/dashboard/users' %}active{% endif %}">
+                <span class="icon">●</span> <span>Usuarios</span>
+            </a>
+        </div>
+        {% endif %}
+
+        {% if not user or user.role != 'admin' %}
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Consultas</div>
+            <a href="/dashboard/consulta" class="sidebar-item {% if request.url.path == '/dashboard/consulta' %}active{% endif %}">
+                <span class="icon">○</span> <span>Mis consultas</span>
+            </a>
+        </div>
+        {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            <div class="sidebar-avatar">{{ user.name[0]|upper if user else '?' }}</div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name">{{ user.name if user else 'Invitado' }}</div>
+                <div class="sidebar-user-role">{{ user.role if user else '—' }}</div>
+            </div>
+            <form method="post" action="/logout" style="margin:0;">
+                <button type="submit" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:0.8rem;padding:0.25rem;" title="Cerrar sesion">↩</button>
+            </form>
+        </div>
+    </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+    {% if flash %}
+    <div style="padding: 1rem 2rem 0;">
+        <div class="flash flash-{{ flash.type }}">{{ flash.message }}</div>
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</main>
+
 </body>
 </html>

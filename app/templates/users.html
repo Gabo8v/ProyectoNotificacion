@@ -1,56 +1,57 @@
 {% extends "base.html" %}
 {% block title %}Usuarios{% endblock %}
 {% block content %}
-<h2 style="margin-bottom: 1rem;">Usuarios</h2>
 
-<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin-bottom:1.5rem;">
-    <h3 style="margin-bottom: 0.75rem;">Nuevo usuario</h3>
-    <form method="POST" action="/dashboard/users">
-        <div class="form-group">
-            <label for="name">Nombre completo</label>
-            <input type="text" name="name" id="name" placeholder="Ej: Juan Perez" required>
-        </div>
-        <div class="form-group">
-            <label for="email">Correo electronico</label>
-            <input type="email" name="email" id="email" placeholder="ejemplo@correo.com" required>
-        </div>
-        <div class="form-group">
-            <label for="phone">WhatsApp (codigo pais + numero, sin @c.us)</label>
-            <input type="text" name="phone" id="phone" placeholder="5493875360385">
-            <div style="font-size:0.8rem;color:var(--text2);margin-top:0.25rem;">Ej: 54 (Argentina) + 9 + numero</div>
-        </div>
-        <button type="submit">Crear usuario</button>
-    </form>
+<div class="main-header">
+    <h1 class="main-title">Usuarios</h1>
 </div>
 
+<div class="main-content">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
+
+<div>
+<h2 style="font-size:1rem;font-weight:500;margin-bottom:0.75rem;">Nuevo usuario</h2>
+<form method="post" action="/dashboard/users" class="form-card" style="max-width:100%;">
+    <div class="form-group">
+        <label for="name">Nombre</label>
+        <input type="text" id="name" name="name" required placeholder="Nombre completo">
+    </div>
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required placeholder="correo@ejemplo.com">
+    </div>
+    <div class="form-group">
+        <label for="phone">WhatsApp</label>
+        <input type="text" id="phone" name="phone" placeholder="5493875123456">
+    </div>
+    <button type="submit">Crear usuario</button>
+</form>
+</div>
+
+<div>
+<h2 style="font-size:1rem;font-weight:500;margin-bottom:0.75rem;">Usuarios registrados</h2>
 {% if users %}
-<table>
-    <thead>
-        <tr>
-            <th>Nombre</th>
-            <th>Email</th>
-            <th>WhatsApp</th>
-            <th>Activo</th>
-            <th>Accion</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for u in users %}
-        <tr>
-            <td><strong>{{ u.name }}</strong></td>
-            <td>{{ u.email }}</td>
-            <td><code style="font-size:0.85rem;">{{ u.phone or '-' }}</code></td>
-            <td>{{ 'Si' if u.is_active else 'No' }}</td>
-            <td>
-                <form method="POST" action="/dashboard/users/{{ u.id }}/delete" style="display:inline;" onsubmit="return confirm('Eliminar usuario {{ u.name }}?')">
-                    <button type="submit" class="btn-danger">Eliminar</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div style="display:flex;flex-direction:column;gap:0.5rem;">
+    {% for u in users %}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0.75rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+                <strong style="font-size:0.9rem;">{{ u.name }}</strong>
+                <div style="font-size:0.78rem;color:var(--text2);"> {{ u.email }} </div>
+                {% if u.phone %}<div style="font-size:0.72rem;color:var(--text2);">{{ u.phone }}</div>{% endif %}
+            </div>
+            <form method="post" action="/dashboard/users/{{ u.id }}/delete" style="margin:0;">
+                <button type="submit" class="btn-danger" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="return confirm('Eliminar {{ u.name }}?')">Eliminar</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
 {% else %}
-<div class="empty">No hay usuarios registrados.</div>
+<div class="empty-state">No hay usuarios.</div>
 {% endif %}
+</div>
+
+</div>
+</div>
 {% endblock %}

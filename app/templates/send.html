@@ -1,88 +1,77 @@
 {% extends "base.html" %}
-{% block title %}Enviar Notificacion{% endblock %}
+{% block title %}Enviar{% endblock %}
 {% block content %}
-<h2 style="margin-bottom: 1rem;">Enviar notificacion</h2>
 
-<div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;">
+<div class="main-header">
+    <h1 class="main-title">Enviar notificacion</h1>
+</div>
 
-    {# --- FORMULARIO --- #}
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;">
-        <form method="POST" action="/dashboard/send">
-            <div class="form-group">
-                <label for="channel">Canal de envio</label>
-                <select name="channel" id="channel">
-                    <option value="email">Correo electronico (Email)</option>
-                    <option value="whatsapp">WhatsApp</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="user_id">Destinatario</label>
-                <select name="user_id" id="user_id">
-                    <option value="">-- Seleccionar usuario --</option>
-                    {% for u in users %}
-                    <option value="{{ u.id }}">{{ u.name }} &lt;{{ u.email }}&gt;</option>
-                    {% endfor %}
-                </select>
-                <div style="font-size:0.8rem;color:var(--text2);margin-top:0.25rem;">
-                    Sino, crealo en <a href="/dashboard/users" style="color:var(--accent);">Usuarios</a>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="template_selector">Template (opcional)</label>
-                <select name="template_selector" id="template_selector">
-                    <option value="">-- Ninguno --</option>
-                    {% for t in templates %}
-                    <option value="{{ t.id }}" data-subject="{{ t.subject or '' }}" data-body="{{ t.body }}">{{ t.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="subject">Asunto</label>
-                <input type="text" name="subject" id="subject" placeholder="Asunto del mensaje">
-            </div>
-            <div class="form-group">
-                <label for="body">Mensaje</label>
-                <textarea name="body" id="body" placeholder="Contenido del mensaje" required></textarea>
-            </div>
-            <button type="submit">Enviar notificacion</button>
-        </form>
-    </div>
+<div class="main-content">
+<div style="display:grid;grid-template-columns:1fr 300px;gap:1.5rem;align-items:start;">
+<div>
+    <form method="post" action="/dashboard/send" class="form-card" style="max-width:100%;" id="sendForm">
+        <div class="form-group">
+            <label for="channel">Canal</label>
+            <select id="channel" name="channel" required>
+                <option value="email">Email</option>
+                <option value="whatsapp">WhatsApp</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="user_id">Usuario</label>
+            <select id="user_id" name="user_id">
+                <option value="">— Sin asignar —</option>
+                {% for u in users %}
+                <option value="{{ u.id }}">{{ u.name }} ({{ u.email }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="subject">Asunto</label>
+            <input type="text" id="subject" name="subject" placeholder="Asunto del mensaje">
+        </div>
+        <div class="form-group">
+            <label for="body">Mensaje</label>
+            <textarea id="body" name="body" required placeholder="Contenido del mensaje..." rows="6"></textarea>
+        </div>
+        <button type="submit">Enviar</button>
+    </form>
+</div>
 
-    {# --- PANEL DE PENDIENTES --- #}
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;">
-        <h3 style="font-size:0.9rem;margin-bottom:0.75rem;color:var(--yellow);">Pendientes por responder</h3>
-        {% if pending_notifications %}
+<div>
+    <div class="form-card" style="max-width:100%;">
+        <h3 style="font-size:0.85rem;font-weight:500;margin-bottom:0.75rem;color:var(--text2);">Consultas pendientes</h3>
+        {% if pending_consultas %}
         <div style="display:flex;flex-direction:column;gap:0.5rem;">
-            {% for n in pending_notifications %}
-            <div style="background:var(--bg);border-radius:6px;padding:0.6rem;border-left:3px solid var(--yellow);font-size:0.85rem;cursor:pointer;"
-                 onclick="document.getElementById('user_id').value='{{ n.user_id or '' }}';document.getElementById('channel').value='{{ n.channel.value }}';document.getElementById('subject').value='RE: {{ n.subject or '' }}';document.getElementById('body').value='';document.getElementById('body').focus();">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-weight:600;">{{ n.user.name if n.user else '?' }}</span>
-                    <span class="badge badge-{{ n.channel.value }}" style="font-size:0.7rem;">{{ n.channel.value }}</span>
-                </div>
-                <div style="color:var(--text2);font-size:0.75rem;margin-top:0.2rem;">
-                    {{ n.subject or '(sin asunto)' }} — {{ n.created_at.strftime('%H:%M') }}
-                </div>
-                <div style="color:var(--accent);font-size:0.7rem;margin-top:0.3rem;">Click para responder</div>
+            {% for c in pending_consultas %}
+            <div class="consulta-pendiente" data-subject="{{ c.subject or '' }}" data-body="{{ c.message }}" data-user="{{ c.user.name if c.user else '' }}" style="padding:0.5rem;background:var(--bg);border-radius:6px;font-size:0.78rem;cursor:pointer;transition:background 0.15s;border:1px solid transparent;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='transparent'" onclick="cargarConsulta(this)">
+                <div style="color:var(--text2);">{{ c.created_at.strftime('%d/%m %H:%M') }} — {{ c.user.name if c.user else '?' }}</div>
+                <div style="margin-top:0.2rem;">{{ c.subject or '(sin asunto)' }}</div>
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <div style="color:var(--text2);font-size:0.85rem;text-align:center;padding:1.5rem 0;">
-            No hay notificaciones pendientes.
-        </div>
+        <div class="empty-state" style="padding:1rem;">Sin consultas pendientes</div>
         {% endif %}
     </div>
-
+</div>
+</div>
 </div>
 
 <script>
-document.getElementById('template_selector').addEventListener('change', function() {
-    var opt = this.options[this.selectedIndex];
-    if (opt.value) {
-        document.getElementById('subject').value = opt.getAttribute('data-subject');
-        document.getElementById('body').value = opt.getAttribute('data-body');
+function cargarConsulta(el) {
+    document.getElementById('subject').value = el.dataset.subject || '';
+    document.getElementById('body').value = el.dataset.body || '';
+    const userName = el.dataset.user;
+    if (userName) {
+        const sel = document.getElementById('user_id');
+        for (let i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].text.startsWith(userName + ' (')) {
+                sel.value = sel.options[i].value;
+                break;
+            }
+        }
     }
-});
+}
 </script>
 {% endblock %}

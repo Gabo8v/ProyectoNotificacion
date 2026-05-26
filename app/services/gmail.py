@@ -6,7 +6,7 @@ import urllib.parse
 from pathlib import Path
 from email.mime.text import MIMEText
 
-import requests
+import requests as requests_lib
 from cryptography.fernet import Fernet
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -25,7 +25,7 @@ TOKEN_FILE = Path(settings.gmail_token_path)
 def _get_fernet() -> Fernet | None:
     key = settings.token_encryption_key
     if not key:
-        logger.warning("TOKEN_ENCRYPTION_KEY no configurada, token sin cifrar")
+        logger.debug("TOKEN_ENCRYPTION_KEY no configurada, token sin cifrar")
         return None
     try:
         return Fernet(key.encode() if isinstance(key, str) else key)
@@ -80,7 +80,7 @@ def auth_url():
 
 def save_token(code):
     c = get_client_config()
-    resp = requests.post(c["token_uri"], data={
+    resp = requests_lib.post(c["token_uri"], data={
         "code": code,
         "client_id": c["client_id"],
         "client_secret": c["client_secret"],
@@ -112,50 +112,62 @@ def get_service():
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-            with open(TOKEN_FILE, "wb") as f:
-                f.write(_encrypt(pickle.dumps(creds)))
+            _session = requests_lib.Session()
+            _session.request = lambda *a, **kw: requests_lib.Session.request(_session, *a, timeout=10, **kw)
+            try:
+                creds.refresh(Request(session=_session))
+                with open(TOKEN_FILE, "wb") as f:
+                    f.write(_encrypt(pickle.dumps(creds)))
+            except Exception as e:
+                logger.error(f"Error al refrescar token Gmail: {e}")
+                return None
         else:
-            print("No hay token valido. Genera uno primero.")
-            auth_url()
+            logger.warning("No hay token valido. Genera uno primero.")
             return None
     return build("gmail", "v1", credentials=creds)
 
 
 class GmailService:
     def __init__(self):
-        self.service = get_service()
+        self._service = None
+
+    def _ensure(self):
+        if self._service is None:
+            self._service = get_service()
+        return self._service
 
     def is_ready(self):
-        return self.service is not None
+        return self._ensure() is not None
 
     def send_email(self, to: str, subject: str, body: str) -> dict | None:
-        if not self.service:
+        svc = self._ensure()
+        if not svc:
             return None
         try:
             message = MIMEText(body, "plain", "utf-8")
             message["to"] = to
             message["subject"] = subject
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
-            result = self.service.users().messages().send(
+            result = svc.users().messages().send(
                 userId="me", body={"raw": raw}
             ).execute()
             return result
         except HttpError as e:
-            print(f"Gmail send error: {e}")
+            logger.error(f"Gmail send error: {e}")
             return None
 
     def read_inbox(self, max_results: int = 5) -> list[dict]:
-        if not self.service:
+        svc = self._ensure()
+        if not svc:
             return []
         try:
-            results = self.service.users().messages().list(
+            results = svc.users().messages().list(
                 userId="me", maxResults=max_results, q="is:unread"
             ).execute()
             messages = results.get("messages", [])
             parsed = []
             for msg in messages:
-                details = self.service.users().messages().get(
+                details = svc.users().messages().get(
                     userId="me", id=msg["id"]
                 ).execute()
                 headers = {h["name"]: h["value"] for h in details["payload"]["headers"]}
@@ -169,14 +181,15 @@ class GmailService:
                 })
             return parsed
         except HttpError as e:
-            print(f"Gmail read error: {e}")
+            logger.error(f"Gmail read error: {e}")
             return []
 
     def mark_as_read(self, message_id: str) -> bool:
-        if not self.service:
+        svc = self._ensure()
+        if not svc:
             return False
         try:
-            self.service.users().messages().modify(
+            svc.users().messages().modify(
                 userId="me",
                 id=message_id,
                 body={"removeLabelIds": ["UNREAD"]},

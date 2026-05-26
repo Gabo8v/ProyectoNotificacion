@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -14,8 +13,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.auth import is_authenticated
 from app.config import settings
 from app.limiter import limiter
-from app.routers import auth, dashboard, health, notifications, polling_control, templates, whatsapp
-from app.tasks.polling import run_polling_loop
+from app.routers import auth, consulta, dashboard, health, notifications, polling_control, templates, whatsapp
 
 logger = logging.getLogger(__name__)
 
@@ -24,20 +22,14 @@ origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(run_polling_loop())
     yield
-    task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
     logger.info("Servidor detenido correctamente")
 
 
 app = FastAPI(
     title="Sistema de Gestion de Notificaciones",
     description="Modulo de notificaciones con Gmail + WhatsApp Bot",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -58,7 +50,8 @@ app.add_middleware(SessionMiddleware, secret_key=settings.token_encryption_key o
 async def dashboard_auth_middleware(request, call_next):
     path = request.url.path
     if path.startswith("/dashboard") and not path.startswith("/login"):
-        if not is_authenticated(request):
+        role = is_authenticated(request)
+        if not role:
             return RedirectResponse(url="/login")
     response = await call_next(request)
     return response
@@ -73,3 +66,4 @@ app.include_router(templates.router)
 app.include_router(whatsapp.router)
 app.include_router(dashboard.router)
 app.include_router(polling_control.router)
+app.include_router(consulta.router)

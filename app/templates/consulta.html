@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Consultas{% endblock %}
+{% block content %}
+
+<div class="main-header">
+    <h1 class="main-title">Consultas</h1>
+</div>
+
+<div class="main-content">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
+
+<div>
+<h2 style="font-size:1rem;font-weight:500;margin-bottom:0.75rem;">Nueva consulta</h2>
+<form method="post" action="/dashboard/consulta" class="form-card" style="max-width:100%;">
+    <div class="form-group">
+        <label for="subject">Asunto</label>
+        <input type="text" id="subject" name="subject" required placeholder="Ej: Problema con mi pedido" maxlength="200">
+    </div>
+    <div class="form-group">
+        <label for="message">Mensaje</label>
+        <textarea id="message" name="message" required rows="5" placeholder="Describa su consulta..."></textarea>
+    </div>
+    <button type="submit">Enviar consulta</button>
+</form>
+</div>
+
+<div>
+<h2 style="font-size:1rem;font-weight:500;margin-bottom:0.75rem;">Historial</h2>
+{% if consultas %}
+<div style="display:flex;flex-direction:column;gap:0.5rem;">
+    {% for c in consultas %}
+    <div class="consulta-item">
+        <div style="display:flex;justify-content:space-between;">
+            <div class="subject">{{ c.subject }}</div>
+            <div class="meta">{{ c.created_at.strftime('%d/%m %H:%M') }}</div>
+        </div>
+        <div class="meta">{{ c.message[:120] }}{% if c.message|length > 120 %}...{% endif %}</div>
+        {% if c.response %}
+        <div class="response-box">
+            <strong style="font-size:0.78rem;color:var(--text2);">Respuesta:</strong>
+            <div style="margin-top:0.25rem;">{{ c.response[:200] }}{% if c.response|length > 200 %}...{% endif %}</div>
+            {% if c.responded_at %}<div style="font-size:0.7rem;color:var(--text2);margin-top:0.25rem;">{{ c.responded_at.strftime('%d/%m %H:%M') }}</div>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No tienes consultas.</div>
+{% endif %}
+</div>
+
+</div>
+</div>
+{% endblock %}

@@ -1,41 +1,26 @@
 {% extends "base.html" %}
 {% block title %}Resumen{% endblock %}
 {% block content %}
-<div class="cards">
-    <div class="card">
-        <h3>Total Notificaciones</h3>
-        <div class="value">{{ total }}</div>
-    </div>
-    <div class="card">
-        <h3>Enviadas</h3>
-        <div class="value" style="color: var(--green);">{{ sent }}</div>
-    </div>
-    <div class="card">
-        <h3>Pendientes</h3>
-        <div class="value" style="color: var(--yellow);">{{ pending }}</div>
-    </div>
-    <div class="card">
-        <h3>Fallidas</h3>
-        <div class="value" style="color: var(--red);">{{ failed }}</div>
-    </div>
-    <div class="card">
-        <h3>Usuarios</h3>
-        <div class="value" style="color: var(--accent);">{{ total_users }}</div>
-    </div>
-    <div class="card">
-        <h3>Templates</h3>
-        <div class="value" style="color: var(--accent);">{{ total_templates }}</div>
-    </div>
+
+<div class="main-header">
+    <h1 class="main-title">Resumen</h1>
 </div>
 
-<div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
-    <a href="/dashboard/send" class="btn" style="padding:0.75rem 1.5rem;text-decoration:none;">+ Enviar notificacion</a>
-    <a href="/dashboard/users" class="btn" style="padding:0.75rem 1.5rem;text-decoration:none;background:var(--surface2);">Gestionar usuarios</a>
-    <a href="/dashboard/templates" class="btn" style="padding:0.75rem 1.5rem;text-decoration:none;background:var(--surface2);">Gestionar templates</a>
+<div class="main-content">
+
+{% if user and user.role == 'admin' %}
+<div class="stats">
+    <div class="stat"><span class="stat-label">Notificaciones</span><span class="stat-value">{{ total }}</span></div>
+    <div class="stat"><span class="stat-label">Enviadas</span><span class="stat-value" style="color:var(--green)">{{ sent }}</span></div>
+    <div class="stat"><span class="stat-label">Pendientes</span><span class="stat-value" style="color:var(--yellow)">{{ pending }}</span></div>
+    <div class="stat"><span class="stat-label">Fallidas</span><span class="stat-value" style="color:var(--red)">{{ failed }}</span></div>
+    <div class="stat"><span class="stat-label">Usuarios</span><span class="stat-value">{{ total_users }}</span></div>
+    <div class="stat"><span class="stat-label">Templates</span><span class="stat-value">{{ total_templates }}</span></div>
 </div>
 
-<h2 style="margin-bottom: 1rem;">Ultimas notificaciones</h2>
+<h2 style="font-size:1rem;font-weight:500;margin-bottom:0.75rem;">Ultimas notificaciones</h2>
 {% if latest %}
+<div class="table-container">
 <table>
     <thead>
         <tr>
@@ -51,14 +36,30 @@
         <tr>
             <td>{{ n.created_at.strftime('%d/%m %H:%M') }}</td>
             <td><span class="badge badge-{{ n.channel.value }}">{{ n.channel.value }}</span></td>
-            <td>{{ n.user.name if n.user else '<sin usuario>' }}</td>
+            <td>{{ n.user.name if n.user else '—' }}</td>
             <td>{{ n.subject or '(sin asunto)' }}</td>
             <td><span class="badge badge-{{ n.status.value }}">{{ n.status.value }}</span></td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% else %}
-<div class="empty">No hay notificaciones todavia.</div>
+<div class="empty-state">No hay notificaciones.</div>
 {% endif %}
+
+{% else %}
+
+<div class="stats">
+    <div class="stat"><span class="stat-label">Consultas</span><span class="stat-value">{{ consultas_total }}</span></div>
+    <div class="stat"><span class="stat-label">Respondidas</span><span class="stat-value" style="color:var(--green)">{{ consultas_respondidas }}</span></div>
+</div>
+
+<p style="color:var(--text2);margin-top:1.5rem;font-size:0.9rem;">
+    Bienvenido, {{ user.name }}. Usa <a href="/dashboard/consulta" style="color:var(--accent);">Consultas</a> para enviar un mensaje.
+</p>
+
+{% endif %}
+
+</div>
 {% endblock %}
