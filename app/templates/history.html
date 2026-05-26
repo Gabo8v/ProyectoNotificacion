@@ -8,7 +8,7 @@
 
 <div class="main-content">
 
-<form method="get" action="/dashboard/history" class="filters" style="background:none;border:none;padding:0;max-width:100%;">
+<form method="get" action="/dashboard/history" class="filters">
     <div class="form-group">
         <label for="channel">Canal</label>
         <select id="channel" name="channel">
@@ -26,8 +26,8 @@
             <option value="failed" {{ 'selected' if request.query_params.get('status') == 'failed' else '' }}>Fallido</option>
         </select>
     </div>
-    <button type="submit" class="btn" style="padding:0.45rem 1rem;font-size:0.82rem;">Filtrar</button>
-    <a href="/dashboard/history" class="btn btn-secondary" style="padding:0.45rem 1rem;font-size:0.82rem;text-decoration:none;">Limpiar</a>
+    <button type="submit">Filtrar</button>
+    <a href="/dashboard/history" class="btn btn-secondary">Limpiar</a>
 </form>
 
 {% if notifications %}
@@ -52,8 +52,8 @@
             <td>{{ n.user.name if n.user else '—' }}</td>
             <td>{{ n.subject or '(sin asunto)' }}</td>
             <td><span class="badge badge-{{ n.status.value }}">{{ n.status.value }}</span></td>
-            <td style="font-size:0.75rem;color:var(--text2);">{{ n.external_id or '—' }}</td>
-            <td style="font-size:0.75rem;color:var(--text2);">{{ n.error_message or '—' }}</td>
+            <td class="cell-meta">{{ n.external_id or '—' }}</td>
+            <td class="cell-meta">{{ n.error_message or '—' }}</td>
         </tr>
         {% endfor %}
     </tbody>

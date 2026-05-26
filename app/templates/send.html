@@ -40,12 +40,12 @@
 
 <div>
     <div class="form-card" style="max-width:100%;">
-        <h3 style="font-size:0.85rem;font-weight:500;margin-bottom:0.75rem;color:var(--text2);">Consultas pendientes</h3>
+        <h3 class="sidebar-title">Consultas pendientes</h3>
         {% if pending_consultas %}
-        <div style="display:flex;flex-direction:column;gap:0.5rem;">
+        <div class="list-item" style="padding:0;border:none;background:none;">
             {% for c in pending_consultas %}
-            <div class="consulta-pendiente" data-subject="{{ c.subject or '' }}" data-body="{{ c.message }}" data-user="{{ c.user.name if c.user else '' }}" style="padding:0.5rem;background:var(--bg);border-radius:6px;font-size:0.78rem;cursor:pointer;transition:background 0.15s;border:1px solid transparent;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='transparent'" onclick="cargarConsulta(this)">
-                <div style="color:var(--text2);">{{ c.created_at.strftime('%d/%m %H:%M') }} — {{ c.user.name if c.user else '?' }}</div>
+            <div class="consulta-pendiente-item" data-subject="{{ c.subject or '' }}" data-body="{{ c.message }}" data-user="{{ c.user.name if c.user else '' }}" onclick="cargarConsulta(this)">
+                <div class="cell-meta">{{ c.created_at.strftime('%d/%m %H:%M') }} — {{ c.user.name if c.user else '?' }}</div>
                 <div style="margin-top:0.2rem;">{{ c.subject or '(sin asunto)' }}</div>
             </div>
             {% endfor %}

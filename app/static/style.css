@@ -390,6 +390,24 @@ button:hover { background: rgba(255,255,255,0.06); }
 .btn-danger:hover { background: rgba(239,68,68,0.25); }
 
 /* ── Flash ── */
+.flash-container {
+    padding: 1rem 2rem 0;
+}
+.logout-form {
+    margin: 0;
+}
+.logout-btn {
+    background: none;
+    border: none;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 0.25rem;
+}
+.logout-btn:hover {
+    color: var(--text);
+}
+
 .flash {
     padding: 0.55rem 1rem;
     border-radius: var(--radius);
@@ -436,6 +454,56 @@ button:hover { background: rgba(255,255,255,0.06); }
     padding: 3rem 1rem;
     color: var(--text3);
     font-size: 0.9rem;
+}
+
+/* ── Section title (reemplaza <h2> inline) ── */
+.section-title {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+}
+
+/* ── List item (templates, users list cards) ── */
+.list-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem;
+}
+.list-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* ── Pending consulta item (send.html sidebar) ── */
+.consulta-pendiente-item {
+    padding: 0.5rem;
+    background: var(--bg);
+    border-radius: 6px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+}
+.consulta-pendiente-item:hover {
+    border-color: var(--accent);
+}
+
+/* ── Meta cell (ID externo, error en tablas) ── */
+.cell-meta {
+    font-size: 0.75rem;
+    color: var(--text2);
+}
+
+/* ── Welcome text (index.html user view) ── */
+.welcome-text {
+    color: var(--text2);
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+}
+.welcome-text a {
+    color: var(--accent);
 }
 
 /* ── Scrollbar ── */

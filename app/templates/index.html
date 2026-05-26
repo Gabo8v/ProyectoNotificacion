@@ -18,7 +18,7 @@
     <div class="stat"><span class="stat-label">Templates</span><span class="stat-value">{{ total_templates }}</span></div>
 </div>
 
-<h2 style="font-size:1rem;font-weight:500;margin-bottom:0.75rem;">Ultimas notificaciones</h2>
+<h2 class="section-title">Ultimas notificaciones</h2>
 {% if latest %}
 <div class="table-container">
 <table>
@@ -55,8 +55,8 @@
     <div class="stat"><span class="stat-label">Respondidas</span><span class="stat-value" style="color:var(--green)">{{ consultas_respondidas }}</span></div>
 </div>
 
-<p style="color:var(--text2);margin-top:1.5rem;font-size:0.9rem;">
-    Bienvenido, {{ user.name }}. Usa <a href="/dashboard/consulta" style="color:var(--accent);">Consultas</a> para enviar un mensaje.
+<p class="welcome-text">
+    Bienvenido, {{ user.name }}. Usa <a href="/dashboard/consulta">Consultas</a> para enviar un mensaje.
 </p>
 
 {% endif %}

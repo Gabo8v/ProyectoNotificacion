@@ -10,8 +10,8 @@
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
 
 <div>
-<h2 style="font-size:1rem;font-weight:500;margin-bottom:0.75rem;">Nueva consulta</h2>
-<form method="post" action="/dashboard/consulta" class="form-card" style="max-width:100%;">
+<h2 class="section-title">Nueva consulta</h2>
+<form method="post" action="/dashboard/consulta" class="form-card">
     <div class="form-group">
         <label for="subject">Asunto</label>
         <input type="text" id="subject" name="subject" required placeholder="Ej: Problema con mi pedido" maxlength="200">
@@ -25,7 +25,7 @@
 </div>
 
 <div>
-<h2 style="font-size:1rem;font-weight:500;margin-bottom:0.75rem;">Historial</h2>
+<h2 class="section-title">Historial</h2>
 {% if consultas %}
 <div style="display:flex;flex-direction:column;gap:0.5rem;">
     {% for c in consultas %}
@@ -37,9 +37,9 @@
         <div class="meta">{{ c.message[:120] }}{% if c.message|length > 120 %}...{% endif %}</div>
         {% if c.response %}
         <div class="response-box">
-            <strong style="font-size:0.78rem;color:var(--text2);">Respuesta:</strong>
+            <strong class="cell-meta">Respuesta:</strong>
             <div style="margin-top:0.25rem;">{{ c.response[:200] }}{% if c.response|length > 200 %}...{% endif %}</div>
-            {% if c.responded_at %}<div style="font-size:0.7rem;color:var(--text2);margin-top:0.25rem;">{{ c.responded_at.strftime('%d/%m %H:%M') }}</div>{% endif %}
+            {% if c.responded_at %}<div class="cell-meta" style="margin-top:0.25rem;">{{ c.responded_at.strftime('%d/%m %H:%M') }}</div>{% endif %}
         </div>
         {% endif %}
     </div>
