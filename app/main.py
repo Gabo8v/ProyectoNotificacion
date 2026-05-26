@@ -1,7 +1,12 @@
+import asyncio
 import logging
+import os
+import shutil
+import subprocess
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -19,9 +24,54 @@ logger = logging.getLogger(__name__)
 
 origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 
+WHATSAPP_BOT_URL = settings.whatsapp_bot_url.rstrip("/")
+BOT_DIR = str(Path(__file__).resolve().parent.parent / "whatsapp-bot")
+NODE_BIN = shutil.which("node") or "node"
+PM2_BIN = shutil.which("pm2.cmd") or shutil.which("pm2") or "pm2.cmd"
+
+
+async def _verificar_bot():
+    logger.info("Verificando conexion con WhatsApp bot...")
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            r = await client.get(f"{WHATSAPP_BOT_URL}/health")
+            if r.status_code == 200:
+                logger.info("WhatsApp bot conectado correctamente")
+                return
+    except Exception as exc:
+        logger.warning("WhatsApp bot no responde (%s)", exc)
+
+    def _intentar_iniciar() -> bool:
+        result = subprocess.run(
+            [PM2_BIN, "start", "whatsapp-bot"],
+            capture_output=True, timeout=15, cwd=BOT_DIR,
+        )
+        if result.returncode == 0:
+            return True
+        serr = result.stderr.decode("utf-8", errors="replace").strip()[:200]
+        logger.warning("pm2 fallo (exit %d): %s", result.returncode, serr)
+        result = subprocess.run(
+            [NODE_BIN, "index.js"],
+            capture_output=True, timeout=10, cwd=BOT_DIR,
+        )
+        if result.returncode == 0:
+            return True
+        serr = result.stderr.decode("utf-8", errors="replace").strip()[:200]
+        logger.error("Node fallo (exit %d): %s", result.returncode, serr)
+        return False
+
+    try:
+        ok = await asyncio.to_thread(_intentar_iniciar)
+        if ok:
+            logger.info("WhatsApp bot iniciado")
+            await asyncio.sleep(3)
+    except Exception as e:
+        logger.error("No se pudo iniciar el WhatsApp bot: %s", e)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    asyncio.create_task(_verificar_bot())
     yield
     logger.info("Servidor detenido correctamente")
 

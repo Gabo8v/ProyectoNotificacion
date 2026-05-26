@@ -35,14 +35,12 @@ if %errorlevel% neq 0 (
 )
 
 REM ---- 3. Iniciar WhatsApp bot ----
-echo [3/4] Iniciando WhatsApp bot...
-tasklist /fi "WindowTitle eq WhatsApp Bot*" 2>nul | findstr "node.exe" >nul
+echo [3/4] Verificando WhatsApp bot...
+call :iniciar_bot
 if %errorlevel% neq 0 (
-    start "WhatsApp Bot" /min cmd /c "cd /d whatsapp-bot && node index.js"
-    echo       WhatsApp bot iniciado (ventana minimizada).
-    echo       Si es la primera vez, escanea el QR que aparecera.
-) else (
-    echo       WhatsApp bot ya esta corriendo.
+    echo [ERROR] No se pudo iniciar el WhatsApp bot.
+    pause
+    exit /b 1
 )
 
 REM ---- 4. Iniciar FastAPI ----
@@ -61,3 +59,38 @@ start http://localhost:8000/dashboard/
 .venv\Scripts\uvicorn app.main:app --reload --port 8000
 
 pause
+exit /b 0
+
+:iniciar_bot
+    REM Intentar via pm2 primero
+    where pm2 >nul 2>&1
+    if %errorlevel% neq 0 (
+        goto start_bot_direct
+    )
+
+    pm2 list 2>nul | findstr "whatsapp-bot.*online" >nul
+    if %errorlevel% equ 0 (
+        echo       WhatsApp bot ya esta corriendo (pm2).
+        exit /b 0
+    )
+
+    echo       Iniciando WhatsApp bot via pm2...
+    pm2 start whatsapp-bot 2>nul
+    if %errorlevel% equ 0 (
+        echo       WhatsApp bot iniciado con pm2.
+        echo       Si es la primera vez, escanea el QR con: pm2 logs whatsapp-bot
+        exit /b 0
+    )
+    echo [WARN] pm2 fallo, intentando inicio directo...
+
+:start_bot_direct
+    tasklist /fi "WindowTitle eq WhatsApp Bot*" 2>nul | findstr "node.exe" >nul
+    if %errorlevel% neq 0 (
+        start "WhatsApp Bot" /min cmd /c "cd /d whatsapp-bot && node index.js"
+        echo       WhatsApp bot iniciado (ventana minimizada).
+        echo       Si es la primera vez, escanea el QR que aparecera.
+        exit /b 0
+    ) else (
+        echo       WhatsApp bot ya esta corriendo.
+        exit /b 0
+    )

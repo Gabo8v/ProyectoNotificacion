@@ -670,4 +670,70 @@ Rediseno completo del frontend del dashboard con tema oscuro tipo ChatGPT:
 ### Pendiente
 - Puerto 8000 sigue ocupado por zombie TCP hasta reinicio de Windows
 - Polling Gmail -> WhatsApp sigue desactivado (comentado en `main.py`)
+
+---
+
+## SESION 26/05/2026 (3ra parte) - Auto-start WhatsApp bot + Open Design
+
+### Open Design descargado
+- Repo clonado: `C:\Users\Gabo8\OneDrive\Escritorio\open-design`
+- Dependencias instaladas con `pnpm install` (Node 24 + pnpm 10.33.2 via corepack)
+- Se ejecuto en puertos efimeros: daemon `:63586`, web `:63587`
+- Pendiente para futura integracion como generador de UI
+
+### Fix: WhatsApp bot caido
+- **Problema:** `pm2 list` mostraba `whatsapp-bot` como `stopped`, puerto 3001 no escuchaba
+- **Solucion inmediata:** `pm2 start whatsapp-bot` (ahora pm2 apunta correctamente a `whatsapp-bot/index.js`)
+
+### Feature: Auto-verificacion del bot al iniciar el proyecto
+Se agregaron dos mecanismos para que el bot arranque automaticamente:
+
+#### `app/main.py` - `_verificar_bot()` en lifespan
+- Se ejecuta como `asyncio.create_task()` al arrancar FastAPI (antes del yield del lifespan)
+- **Paso 1:** GET a `http://localhost:3001/health` (timeout 5s) — si responde 200, ok
+- **Paso 2:** Si no responde, ejecuta `pm2.cmd start whatsapp-bot` via `subprocess.run()` + `asyncio.to_thread()`
+- **Paso 3:** Si pm2 falla, ejecuta `node index.js` directamente desde `whatsapp-bot/`
+- Usa `shutil.which()` para resolver rutas absolutas de `node` y `pm2.cmd`
+- Usa `capture_output=True` con decode `utf-8 errors='replace'` para evitar crash por Unicode
+
+#### `iniciar.bat` - Refactorizado
+- Nueva subrutina `:iniciar_bot` que prioriza pm2:
+  1. Si `pm2` existe en PATH, chequea si `whatsapp-bot` ya esta online
+  2. Si no, ejecuta `pm2 start whatsapp-bot`
+  3. Si pm2 falla o no existe, cae al metodo anterior (ventana `cmd /c node index.js`)
+- El script principal llama `call :iniciar_bot` y aborta si falla
+
+#### Prueba realizada
+1. WhatsApp bot detenido (`pm2 stop`) -> puerto 3001 cerrado
+2. FastAPI iniciado en puerto 8002 con el nuevo codigo
+3. Lifespan ejecuto `_verificar_bot()` -> detecto bot caido -> lo inicio via pm2
+4. Verificado: bot online (PID 2432), puerto 3001 escuchando, health endpoint ok
+
+### Nota tecnica para Windows
+- `asyncio.create_subprocess_exec` no es confiable bajo uvicorn+Windows para comandos tipo `.cmd`
+- Solucion: usar `asyncio.to_thread()` + `subprocess.run()` del modulo sincronico
+- `shutil.which()` resuelve rutas absolutas necesarias para subprocess
+
+### Estado al cierre de sesion (26/05/2026 - 3ra parte)
+| Servicio | Puerto | Estado |
+|----------|--------|--------|
+| FastAPI (uvicorn) | 8002 | ❌ DETENIDO |
+| PostgreSQL (Docker) | 5432 | ✅ CORRIENDO |
+| pgAdmin (Docker) | 5050 | ✅ CORRIENDO |
+| WhatsApp Bot (Node.js) | 3001 | ❌ DETENIDO (pm2 stopped) |
+| Open Design | 63586/63587 | ❌ DETENIDO |
+
+### Para reanudar
+```powershell
+cd C:\Users\Gabo8\OneDrive\Escritorio\ProyectoNotificacion
+.venv\Scripts\activate
+docker ps | findstr notificaciones     # Verificar PostgreSQL+pgAdmin
+docker-compose up -d                   # Si faltan
+.venv\Scripts\uvicorn app.main:app --reload --port 8000  # FastAPI (auto-arranca bot)
+# Si puerto 8000 zombie, usar --port 8001 o 8002
+```
+
+### Archivos modificados
+- `app/main.py` - Import asyncio, subprocess, shutil, httpx; agregada `_verificar_bot()`
+- `iniciar.bat` - Refactorizado con subrutina `:iniciar_bot` (pm2 priority)
 ```
