@@ -45,16 +45,4 @@ whatsapp-bot/.wwebjs_cache/
 docker-data/
 
 # Generated
-generar_plan.py
 qr.png
-
-# Ad-hoc scripts
-cookies.txt
-check_db.py
-check_notifications.py
-test_api.py
-test_app.py
-
-# Upload scripts
-drive_upload.py
-drive_download.py
