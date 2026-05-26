@@ -41,9 +41,11 @@ async def _verificar_bot():
     except Exception as exc:
         logger.warning("WhatsApp bot no responde (%s)", exc)
 
+    BOT_SCRIPT = str(Path(BOT_DIR) / "index.js")
+
     def _intentar_iniciar() -> bool:
         result = subprocess.run(
-            [PM2_BIN, "start", "whatsapp-bot"],
+            [PM2_BIN, "start", BOT_SCRIPT, "--name", "whatsapp-bot"],
             capture_output=True, timeout=15, cwd=BOT_DIR,
         )
         if result.returncode == 0:

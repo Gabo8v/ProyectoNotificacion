@@ -46,6 +46,7 @@ docker-data/
 
 # Generated
 generar_plan.py
+qr.png
 
 # Ad-hoc scripts
 cookies.txt

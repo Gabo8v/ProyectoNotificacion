@@ -736,4 +736,76 @@ docker-compose up -d                   # Si faltan
 ### Archivos modificados
 - `app/main.py` - Import asyncio, subprocess, shutil, httpx; agregada `_verificar_bot()`
 - `iniciar.bat` - Refactorizado con subrutina `:iniciar_bot` (pm2 priority)
+
+---
+
+## SESION 26/05/2026 (4ta parte) - Frontend Linear Design + Fix bot + QR PNG
+
+### Resumen
+Modernización del frontend del dashboard con tema oscuro usando OKLCH tokens de Open Design (Linear). Fix permanente de pm2 con rutas explícitas. QR regenerado como PNG para escaneo fiable.
+
+### Cambios en CSS y login
+
+#### `app/static/style.css` - Tokens Linear Design System
+- **Fondo:** `#08090a`, tarjetas `#0f1011`, superficie `rgba(255,255,255,0.03)`
+- **Texto:** `#f7f8f8` primario, `#8a8f98` secundario, `#62666d` terciario
+- **Acento:** `#5e6ad2` / hover `#828fff` (OKLCH)
+- **Bordes:** `rgba(255,255,255,0.08)` y `rgba(255,255,255,0.05)`
+- **Tipografía:** Inter Variable con `cv01`, `ss03`
+- **Badges:** pill-style con radio 9999px
+- **Botones:** ghost con borde fino (sin bg sólido)
+- **Inputs:** dark con foco `box-shadow`
+
+#### `app/routers/auth.py` - Login/register con tabs
+- Página única con tabs "Iniciar sesión" / "Registrarse"
+- OKLCH tokens inline (bg, surface, card, fg, muted, border, accent)
+- Inter font, uppercase labels, inputs con borde y focus shadow
+- Alertas error/success inline
+- Form login: username + password; register: username + password + email + WhatsApp
+- Fix: `KeyError: 'box-sizing'` resuelto cambiando `.format()` por `.replace()`
+
+### Fixes de infraestructura
+
+| Problema | Solución |
+|----------|----------|
+| pm2 apuntaba a `whatsapp-sender/bot.js` viejo | `pm2 delete whatsapp-bot` + `pm2 start whatsapp-bot/index.js --name whatsapp-bot` con ruta absoluta |
+| `_verificar_bot()` usaba nombre de proceso no fiable | Cambiado a ruta absoluta `C:\Users\Gabo8\...\whatsapp-bot\index.js` |
+| `iniciar.bat` usaba nombre relativo | Cambiado a `%~dp0whatsapp-bot\index.js` explícito |
+| Webhook del bot apuntaba a `:8000` | Actualizado a `:8002` |
+| Puerto 8000/8001 zombie | Servidor movido a puerto 8002 |
+| Sesión WhatsApp perdida al migrar de `whatsapp-sender` | Eliminado `.wwebjs_auth` corrupto, generado QR nuevo como PNG |
+
+### QR como imagen PNG
+- Instalado paquete `qrcode` (npm) en `whatsapp-bot/`
+- Modificado `index.js`: en evento `qr`, genera `qr.png` (512x512) en raíz del proyecto
+- Nuevo endpoint `GET /qr-image`: sirve QR como HTML con imagen PNG embebida
+- Nuevo endpoint `GET /qr-raw`: devuelve QR como data URL JSON
+- QR escaneado exitosamente -> sesión autenticada y persistente
+
+### Estado al cierre de sesion (26/05/2026 - 4ta parte)
+| Servicio | Puerto | Estado |
+|----------|--------|--------|
+| FastAPI (uvicorn) | 8002 | ❌ DETENIDO |
+| PostgreSQL (Docker) | 5432 | ✅ CORRIENDO |
+| pgAdmin (Docker) | 5050 | ✅ CORRIENDO |
+| WhatsApp Bot (Node.js) | 3001 | ✅ CORRIENDO (pm2, sesión autenticada) |
+
+### Para reanudar
+```powershell
+cd C:\Users\Gabo8\OneDrive\Escritorio\ProyectoNotificacion
+.venv\Scripts\activate
+docker-compose up -d                                 # PostgreSQL + pgAdmin
+pm2 start whatsapp-bot                               # WhatsApp (se auto-conecta)
+.venv\Scripts\uvicorn app.main:app --reload --port 8002
+# Credenciales: admin/admin123 (admin), usuario/usuario123 (user)
+```
+
+### Archivos modificados
+- `app/static/style.css` - Tokens Linear Design System (OKLCH)
+- `app/routers/auth.py` - Login/register con tabs + OKLCH tokens
+- `whatsapp-bot/index.js` - +qr-code package, +qr.png, +/qr-image, +/qr-raw
+- `whatsapp-bot/package.json` - +dependencia qrcode
+- `app/services/whatsapp.py` - send_message() con @c.us auto (existente)
+- `app/main.py` - _verificar_bot() con ruta absoluta
+- `iniciar.bat` - puerto 8002, ruta explícita al bot
 ```

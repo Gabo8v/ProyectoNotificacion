@@ -47,16 +47,16 @@ REM ---- 4. Iniciar FastAPI ----
 echo [4/4] Iniciando FastAPI...
 echo.
 echo ============================================
-echo  Dashboard: http://localhost:8000/dashboard/
-echo  API Docs:  http://localhost:8000/docs
-echo  Health:    http://localhost:8000/health
+echo  Dashboard: http://localhost:8002/dashboard/
+echo  API Docs:  http://localhost:8002/docs
+echo  Health:    http://localhost:8002/health
 echo ============================================
 echo.
 echo  Presiona Ctrl+C para detener el servidor
 echo.
 
-start http://localhost:8000/dashboard/
-.venv\Scripts\uvicorn app.main:app --reload --port 8000
+start http://localhost:8002/dashboard/
+.venv\Scripts\uvicorn app.main:app --reload --port 8002
 
 pause
 exit /b 0
@@ -75,7 +75,8 @@ exit /b 0
     )
 
     echo       Iniciando WhatsApp bot via pm2...
-    pm2 start whatsapp-bot 2>nul
+    pm2 delete whatsapp-bot 2>nul
+    pm2 start "%~dp0whatsapp-bot\index.js" --name whatsapp-bot 2>nul
     if %errorlevel% equ 0 (
         echo       WhatsApp bot iniciado con pm2.
         echo       Si es la primera vez, escanea el QR con: pm2 logs whatsapp-bot
